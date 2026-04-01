@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>troqueAI - Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+    .sidebar {
+      position: fixed; left: 0; top: 0; bottom: 0;
+      width: 240px; background: #1f2937; color: white;
+      padding: 24px 0;
+    }
+    .sidebar .logo {
+      padding: 0 24px 24px; border-bottom: 1px solid #374151;
+      font-size: 20px; font-weight: 700;
+    }
+    .sidebar .logo span { color: #818cf8; }
+    .sidebar nav { margin-top: 16px; }
+    .sidebar a {
+      display: block; padding: 12px 24px; color: #9ca3af;
+      text-decoration: none; font-size: 14px; transition: all 0.2s;
+    }
+    .sidebar a:hover, .sidebar a.active { color: white; background: #374151; }
+
+    .main { margin-left: 240px; padding: 32px; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .stat-card {
+      background: white; border-radius: 12px; padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .stat-card .label { font-size: 13px; color: #6b7280; font-weight: 500; }
+    .stat-card .value { font-size: 32px; font-weight: 700; color: #1f2937; margin-top: 4px; }
+    .stat-card .sub { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+
+    .card {
+      background: white; border-radius: 12px; padding: 24px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px;
+    }
+    .card h2 { font-size: 18px; color: #1f2937; margin-bottom: 16px; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 12px 16px; font-size: 14px; }
+    th { color: #6b7280; font-weight: 600; border-bottom: 2px solid #e5e7eb; }
+    td { border-bottom: 1px solid #f3f4f6; color: #374151; }
+    tr:hover td { background: #f9fafb; }
+
+    .badge {
+      display: inline-block; padding: 4px 10px; border-radius: 20px;
+      font-size: 12px; font-weight: 600;
+    }
+    .badge-pendente { background: #fef3c7; color: #92400e; }
+    .badge-aprovada { background: #d1fae5; color: #065f46; }
+    .badge-postado { background: #dbeafe; color: #1e40af; }
+    .badge-recebido { background: #e0e7ff; color: #3730a3; }
+    .badge-resolvida { background: #d1fae5; color: #065f46; }
+    .badge-rejeitada { background: #fee2e2; color: #991b1b; }
+    .badge-cancelada { background: #f3f4f6; color: #6b7280; }
+
+    .badge-troca { background: #dbeafe; color: #1e40af; }
+    .badge-devolucao { background: #fce7f3; color: #9d174d; }
+
+    .actions button {
+      padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 6px;
+      background: white; cursor: pointer; font-size: 12px; margin-right: 4px;
+    }
+    .actions button:hover { background: #f3f4f6; }
+
+    .filters {
+      display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .filters select, .filters input {
+      padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px;
+      font-size: 14px; font-family: inherit;
+    }
+
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: #9ca3af;
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main { margin-left: 0; padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="logo">troque<span>AI</span></div>
+  <nav>
+    <a href="#" class="active" onclick="showSection('dashboard')">Dashboard</a>
+    <a href="#" onclick="showSection('solicitacoes')">Solicitações</a>
+    <a href="#" onclick="showSection('configuracoes')">Configurações</a>
+  </nav>
+</div>
+
+<div class="main">
+
+  <!-- DASHBOARD -->
+  <div id="section-dashboard">
+    <h1 style="font-size: 24px; color: #1f2937; margin-bottom: 24px;">Dashboard</h1>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">Total de Solicitações</div>
+        <div class="value" id="stat-total">-</div>
+        <div class="sub">Últimos 30 dias</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Pendentes</div>
+        <div class="value" id="stat-pendentes" style="color: #f59e0b;">-</div>
+        <div class="sub">Aguardando análise</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Trocas</div>
+        <div class="value" id="stat-trocas" style="color: #3b82f6;">-</div>
+        <div class="sub">No período</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Devoluções</div>
+        <div class="value" id="stat-devolucoes" style="color: #ec4899;">-</div>
+        <div class="sub">No período</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Taxa de Resolução</div>
+        <div class="value" id="stat-taxa" style="color: #10b981;">-</div>
+        <div class="sub">Resolvidas / Total</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOLICITACOES -->
+  <div id="section-solicitacoes" style="display:none;">
+    <h1 style="font-size: 24px; color: #1f2937; margin-bottom: 24px;">Solicitações</h1>
+
+    <div class="filters">
+      <select id="filtro-status" onchange="carregarSolicitacoes()">
+        <option value="">Todos os status</option>
+        <option value="pendente">Pendente</option>
+        <option value="aprovada">Aprovada</option>
+        <option value="postado">Postado</option>
+        <option value="recebido">Recebido</option>
+        <option value="resolvida">Resolvida</option>
+        <option value="rejeitada">Rejeitada</option>
+      </select>
+      <select id="filtro-tipo" onchange="carregarSolicitacoes()">
+        <option value="">Todos os tipos</option>
+        <option value="troca">Troca</option>
+        <option value="devolucao">Devolução</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Protocolo</th>
+            <th>Pedido</th>
+            <th>Cliente</th>
+            <th>Tipo</th>
+            <th>Status</th>
+            <th>Data</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tabela-solicitacoes">
+          <tr><td colspan="7" class="empty-state"><div class="icon">📦</div>Nenhuma solicitação encontrada</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CONFIGURACOES -->
+  <div id="section-configuracoes" style="display:none;">
+    <h1 style="font-size: 24px; color: #1f2937; margin-bottom: 24px;">Configurações</h1>
+
+    <div class="card">
+      <h2>Dados da Loja</h2>
+      <div style="display: grid; gap: 16px; max-width: 500px;">
+        <div>
+          <label style="font-size: 14px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Nome da Loja</label>
+          <input type="text" id="cfg-loja-nome" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        </div>
+        <div>
+          <label style="font-size: 14px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Prazo para Troca (dias)</label>
+          <input type="number" id="cfg-prazo-troca" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        </div>
+        <div>
+          <label style="font-size: 14px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Cor Primária</label>
+          <input type="color" id="cfg-cor-primaria" style="width: 80px; height: 40px; border: none; cursor: pointer;">
+        </div>
+        <button onclick="salvarConfiguracoes()" style="padding: 12px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+          Salvar Configurações
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // TODO: implementar autenticacao e tenant_id dinamico
+  const TENANT_ID = 'demo';
+
+  function showSection(name) {
+    document.querySelectorAll('[id^="section-"]').forEach(s => s.style.display = 'none');
+    document.getElementById(`section-${name}`).style.display = 'block';
+    document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+    event.target.classList.add('active');
+
+    if (name === 'dashboard') carregarDashboard();
+    if (name === 'solicitacoes') carregarSolicitacoes();
+  }
+
+  async function carregarDashboard() {
+    try {
+      const res = await fetch(`/api/dashboard?tenant_id=${TENANT_ID}&periodo=30d`);
+      const data = await res.json();
+      document.getElementById('stat-total').textContent = data.total || 0;
+      document.getElementById('stat-pendentes').textContent = data.pendentes || 0;
+      document.getElementById('stat-trocas').textContent = data.trocas || 0;
+      document.getElementById('stat-devolucoes').textContent = data.devolucoes || 0;
+      document.getElementById('stat-taxa').textContent = (data.taxaResolucao || 0) + '%';
+    } catch (err) {
+      console.error('Erro dashboard:', err);
+    }
+  }
+
+  async function carregarSolicitacoes() {
+    try {
+      const status = document.getElementById('filtro-status').value;
+      const tipo = document.getElementById('filtro-tipo').value;
+      let url = `/api/solicitacoes?tenant_id=${TENANT_ID}`;
+      if (status) url += `&status=${status}`;
+      if (tipo) url += `&tipo=${tipo}`;
+
+      const res = await fetch(url, { headers: { 'X-Tenant-Id': TENANT_ID } });
+      const data = await res.json();
+
+      const tbody = document.getElementById('tabela-solicitacoes');
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">📦</div>Nenhuma solicitação</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.map(s => `
+        <tr>
+          <td><strong>${s.protocolo}</strong></td>
+          <td>#${s.order_number}</td>
+          <td>${s.customer_name || '-'}</td>
+          <td><span class="badge badge-${s.tipo}">${s.tipo}</span></td>
+          <td><span class="badge badge-${s.status}">${s.status}</span></td>
+          <td>${new Date(s.created_at).toLocaleDateString('pt-BR')}</td>
+          <td class="actions">
+            <button onclick="abrirDetalhe('${s.id}')">Ver</button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      console.error('Erro solicitacoes:', err);
+    }
+  }
+
+  function abrirDetalhe(id) {
+    // TODO: modal de detalhe com ações (aprovar, rejeitar, gerar cupom)
+    alert('Detalhe da solicitação: ' + id);
+  }
+
+  async function salvarConfiguracoes() {
+    try {
+      const configs = {
+        loja_nome: document.getElementById('cfg-loja-nome').value,
+        prazo_troca_dias: document.getElementById('cfg-prazo-troca').value,
+        cor_primaria: document.getElementById('cfg-cor-primaria').value
+      };
+
+      await fetch(`/api/tenants?tenant_id=${TENANT_ID}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': TENANT_ID },
+        body: JSON.stringify({ configs })
+      });
+
+      alert('Configurações salvas!');
+    } catch (err) {
+      alert('Erro ao salvar: ' + err.message);
+    }
+  }
+
+  // Init
+  carregarDashboard();
+</script>
+
+</body>
+</html>

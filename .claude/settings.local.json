@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/seed.js)",
+      "Bash(curl -s http://localhost:3001/api/portal?slug=loja-teste'&'action=config)",
+      "Bash(curl:*)",
+      "Bash(node -e \":*)",
+      "Bash(node -e \"require\\(''dotenv''\\).config\\(\\); console.log\\(process.env.SUPABASE_URL\\);\")",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(tasklist)"
+    ]
+  }
+}

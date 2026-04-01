@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Central de Trocas e Devoluções</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+    .header {
+      background: linear-gradient(135deg, var(--cor-primaria, #6366f1), var(--cor-secundaria, #8b5cf6));
+      padding: 40px 20px;
+      text-align: center;
+      color: white;
+    }
+    .header h1 { font-size: 24px; margin-bottom: 8px; }
+    .header p { opacity: 0.9; font-size: 14px; }
+
+    .container { max-width: 600px; margin: -30px auto 40px; padding: 0 16px; position: relative; }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-weight: 600; font-size: 14px; color: #374151; margin-bottom: 6px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--cor-primaria, #6366f1);
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      color: white;
+      background: var(--cor-primaria, #6366f1);
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .item-card {
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .item-card.selected { border-color: var(--cor-primaria, #6366f1); background: #f5f3ff; }
+    .item-card h4 { font-size: 15px; color: #1f2937; }
+    .item-card p { font-size: 13px; color: #6b7280; margin-top: 4px; }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-pendente { background: #fef3c7; color: #92400e; }
+    .status-aprovada { background: #d1fae5; color: #065f46; }
+    .status-postado { background: #dbeafe; color: #1e40af; }
+    .status-recebido { background: #e0e7ff; color: #3730a3; }
+    .status-resolvida { background: #d1fae5; color: #065f46; }
+    .status-rejeitada { background: #fee2e2; color: #991b1b; }
+
+    .timeline { padding-left: 20px; border-left: 3px solid var(--cor-primaria, #6366f1); }
+    .timeline-item { margin-bottom: 16px; position: relative; }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -27px;
+      top: 4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--cor-primaria, #6366f1);
+    }
+
+    .step { display: none; }
+    .step.active { display: block; }
+
+    .alert {
+      padding: 14px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    .alert-error { background: #fee2e2; color: #991b1b; }
+    .alert-success { background: #d1fae5; color: #065f46; }
+
+    .loader {
+      width: 40px; height: 40px;
+      border: 4px solid #e5e7eb;
+      border-top-color: var(--cor-primaria, #6366f1);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .powered-by {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    .powered-by a { color: #6366f1; text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<div class="header" id="header">
+  <h1 id="loja-nome">Central de Trocas e Devoluções</h1>
+  <p>Solicite sua troca ou devolução de forma rápida e fácil</p>
+</div>
+
+<div class="container">
+
+  <!-- STEP 1: Buscar Pedido -->
+  <div class="card step active" id="step-busca">
+    <h2 style="font-size: 18px; margin-bottom: 20px; color: #1f2937;">Buscar Pedido</h2>
+    <div id="busca-error" class="alert alert-error" style="display:none;"></div>
+    <div class="form-group">
+      <label>CPF ou E-mail</label>
+      <input type="text" id="identificador" placeholder="Digite seu CPF ou e-mail">
+    </div>
+    <div class="form-group">
+      <label>Número do Pedido</label>
+      <input type="text" id="numero-pedido" placeholder="Ex: 12345">
+    </div>
+    <button class="btn" onclick="buscarPedido()">Buscar Pedido</button>
+
+    <div style="text-align: center; margin-top: 20px;">
+      <a href="#" onclick="mostrarSolicitacoes()" style="color: var(--cor-primaria, #6366f1); font-size: 14px;">
+        Já tenho uma solicitação - ver status
+      </a>
+    </div>
+  </div>
+
+  <!-- STEP 2: Selecionar Itens -->
+  <div class="card step" id="step-itens">
+    <h2 style="font-size: 18px; margin-bottom: 6px; color: #1f2937;">Selecione os Itens</h2>
+    <p style="font-size: 13px; color: #6b7280; margin-bottom: 20px;">Pedido #<span id="pedido-num"></span></p>
+    <div id="itens-lista"></div>
+    <div class="form-group" style="margin-top: 20px;">
+      <label>Tipo de Solicitação</label>
+      <select id="tipo-solicitacao">
+        <option value="troca">Troca</option>
+        <option value="devolucao">Devolução</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Motivo</label>
+      <select id="motivo-select"></select>
+    </div>
+    <div class="form-group">
+      <label>Observação (opcional)</label>
+      <textarea id="observacao" rows="3" placeholder="Descreva mais detalhes se necessário..."></textarea>
+    </div>
+    <button class="btn" onclick="enviarSolicitacao()">Enviar Solicitação</button>
+    <button class="btn" style="background: #e5e7eb; color: #374151; margin-top: 10px;" onclick="voltarBusca()">Voltar</button>
+  </div>
+
+  <!-- STEP 3: Confirmacao -->
+  <div class="card step" id="step-confirmacao">
+    <div style="text-align: center;">
+      <div style="font-size: 48px; margin-bottom: 16px;">✓</div>
+      <h2 style="font-size: 20px; color: #065f46; margin-bottom: 8px;">Solicitação Enviada!</h2>
+      <p style="color: #6b7280; margin-bottom: 16px;">Protocolo: <strong id="protocolo-gerado"></strong></p>
+      <p style="font-size: 14px; color: #6b7280;">Você receberá atualizações por e-mail.</p>
+    </div>
+    <button class="btn" style="margin-top: 24px;" onclick="voltarInicio()">Nova Solicitação</button>
+  </div>
+
+  <!-- STEP: Loading -->
+  <div class="step" id="step-loading">
+    <div class="card" style="text-align: center; padding: 40px;">
+      <div class="loader"></div>
+      <p style="color: #6b7280; margin-top: 16px;">Carregando...</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="powered-by">
+  Powered by <a href="#">troqueAI</a>
+</div>
+
+<script>
+  // Extrair slug do tenant da URL: /portal/{slug}
+  const slug = window.location.pathname.split('/portal/')[1]?.split('/')[0] || '';
+  let tenantConfig = {};
+  let tenantId = null;
+  let pedidoData = null;
+  let itensSelecionados = [];
+
+  // Carregar config do tenant
+  async function carregarConfig() {
+    try {
+      const res = await fetch(`/api/portal?slug=${slug}&action=config`);
+      if (!res.ok) throw new Error('Loja não encontrada');
+      tenantConfig = await res.json();
+      tenantId = tenantConfig.tenant_id;
+
+      // Aplicar branding
+      document.getElementById('loja-nome').textContent = tenantConfig.loja_nome || 'Central de Trocas';
+      document.documentElement.style.setProperty('--cor-primaria', tenantConfig.cor_primaria);
+      document.documentElement.style.setProperty('--cor-secundaria', tenantConfig.cor_secundaria);
+      document.title = `Trocas e Devoluções - ${tenantConfig.loja_nome}`;
+    } catch (err) {
+      console.error('Erro ao carregar config:', err);
+    }
+  }
+
+  function mostrarStep(stepId) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById(stepId).classList.add('active');
+  }
+
+  async function buscarPedido() {
+    const identificador = document.getElementById('identificador').value.trim();
+    const pedido = document.getElementById('numero-pedido').value.trim();
+    const errorEl = document.getElementById('busca-error');
+    errorEl.style.display = 'none';
+
+    if (!identificador || !pedido) {
+      errorEl.textContent = 'Preencha todos os campos.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    mostrarStep('step-loading');
+
+    try {
+      const res = await fetch(`/api/portal?slug=${slug}&identificador=${encodeURIComponent(identificador)}&pedido=${encodeURIComponent(pedido)}&action=pedido`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Pedido não encontrado');
+      }
+
+      pedidoData = await res.json();
+      document.getElementById('pedido-num').textContent = pedidoData.order_number;
+
+      // Renderizar itens
+      const itensContainer = document.getElementById('itens-lista');
+      const items = pedidoData.items || [];
+      itensContainer.innerHTML = items.map((item, i) => `
+        <div class="item-card" onclick="toggleItem(this, ${i})" data-index="${i}">
+          <h4>${item.name || item.nome || 'Produto'}</h4>
+          <p>Qtd: ${item.quantity || item.qtd || 1} | R$ ${item.price || item.preco || '0,00'}</p>
+        </div>
+      `).join('');
+
+      // Preencher motivos
+      const motivoSelect = document.getElementById('motivo-select');
+      const motivos = tenantConfig.motivos_troca || ['Tamanho errado', 'Defeito', 'Outro'];
+      motivoSelect.innerHTML = motivos.map(m => `<option value="${m}">${m}</option>`).join('');
+
+      itensSelecionados = [];
+      mostrarStep('step-itens');
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = 'block';
+      mostrarStep('step-busca');
+    }
+  }
+
+  function toggleItem(el, index) {
+    el.classList.toggle('selected');
+    if (itensSelecionados.includes(index)) {
+      itensSelecionados = itensSelecionados.filter(i => i !== index);
+    } else {
+      itensSelecionados.push(index);
+    }
+  }
+
+  async function enviarSolicitacao() {
+    if (itensSelecionados.length === 0) {
+      alert('Selecione pelo menos um item.');
+      return;
+    }
+
+    const items = pedidoData.items || [];
+    const itensSel = itensSelecionados.map(i => items[i]);
+
+    mostrarStep('step-loading');
+
+    try {
+      const res = await fetch(`/api/solicitacoes?tenant_id=${tenantId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': tenantId },
+        body: JSON.stringify({
+          order_number: pedidoData.order_number,
+          tipo: document.getElementById('tipo-solicitacao').value,
+          motivo: document.getElementById('motivo-select').value,
+          itens: itensSel,
+          customer_name: pedidoData.customer_name,
+          customer_email: pedidoData.customer_email,
+          observacao: document.getElementById('observacao').value
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao enviar');
+
+      document.getElementById('protocolo-gerado').textContent = data.protocolo;
+      mostrarStep('step-confirmacao');
+    } catch (err) {
+      alert('Erro: ' + err.message);
+      mostrarStep('step-itens');
+    }
+  }
+
+  function mostrarSolicitacoes() {
+    // TODO: implementar tela de acompanhamento
+    alert('Em breve: acompanhe suas solicitações aqui.');
+  }
+
+  function voltarBusca() { mostrarStep('step-busca'); }
+  function voltarInicio() {
+    document.getElementById('identificador').value = '';
+    document.getElementById('numero-pedido').value = '';
+    mostrarStep('step-busca');
+  }
+
+  // Init
+  carregarConfig();
+</script>
+
+</body>
+</html>

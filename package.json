@@ -1,0 +1,20 @@
+{
+  "name": "troqueai",
+  "version": "0.1.0",
+  "description": "Plataforma SaaS de automacao de trocas e devolucoes para e-commerce",
+  "private": true,
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "axios": "^1.7.9",
+    "express": "^4.21.2",
+    "resend": "^4.1.2",
+    "dotenv": "^16.4.7"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
