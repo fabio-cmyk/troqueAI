@@ -51,7 +51,7 @@ docs/
 - [ ] Integração Correios (logística reversa)
 - [ ] Widget embeddable (JS para colar em qualquer loja)
 - [ ] Deploy no Vercel
-- [x] Sistema de memória persistente configurado (4 arquivos + MEMORY.md)
+- [x] Sistema de memória persistente configurado (7 arquivos + MEMORY.md)
 
 ## Comandos
 ```bash
