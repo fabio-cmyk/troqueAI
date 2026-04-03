@@ -10,7 +10,8 @@
     { "source": "/admin", "destination": "/public/admin/index.html" },
     { "source": "/admin/:path*", "destination": "/public/admin/index.html" },
     { "source": "/portal/:tenant", "destination": "/public/portal/index.html" },
-    { "source": "/portal/:tenant/:path*", "destination": "/public/portal/index.html" }
+    { "source": "/portal/:tenant/:path*", "destination": "/public/portal/index.html" },
+    { "source": "/", "destination": "/public/index.html" }
   ],
   "headers": [
     {

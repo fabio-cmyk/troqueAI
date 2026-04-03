@@ -14,12 +14,13 @@ Inspirada na Troquecommerce, com foco em multi-tenancy e simplicidade.
 ## Estrutura
 ```
 api/                    → Endpoints serverless
-  auth.js               → Login JWT (POST action=login|me)
-  solicitacoes.js       → CRUD de trocas/devolucoes + emails automaticos
+  auth.js               → Login + Signup JWT (POST action=login|signup|me)
+  solicitacoes.js       → CRUD de trocas/devolucoes + emails + cupons Shopify/Yampi
   portal.js             → Endpoint publico (cliente busca pedido por CPF/email)
   tenants.js            → Gestao de lojas (multi-tenant)
   dashboard.js          → Metricas e stats para admin
   webhooks.js           → Recebe pedidos do Shopify/Yampi
+  integracoes.js        → Conectar plataforma (verifica, cria webhook, importa 30d)
 lib/
   supabase.js           → ORM (tenants, solicitacoes, pedidos, configs)
   auth-middleware.js    → JWT helper (gerar/verificar token)
@@ -28,8 +29,10 @@ lib/
   yampi.js              → Yampi API (criar/deletar cupons via Dooki)
   correios.js           → Correios logistica reversa (postagem + frete)
 public/
-  admin/index.html      → Dashboard admin com login + modal detalhe
+  index.html            → Landing page (home)
+  admin/index.html      → Dashboard admin com login + signup + integracoes
   portal/index.html     → Portal self-service do cliente
+  widget/widget.js      → Widget embeddable (iframe + botao flutuante)
 migrations/
   002_auth_and_webhooks.sql → DDL para colunas de auth e webhooks
 scripts/

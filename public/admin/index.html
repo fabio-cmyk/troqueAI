@@ -281,7 +281,7 @@
     <a href="#" class="active" onclick="showSection('dashboard', this)">Dashboard</a>
     <a href="#" onclick="showSection('solicitacoes', this)">Solicitacoes</a>
     <a href="#" onclick="showSection('configuracoes', this)">Configuracoes</a>
-    <a href="#" onclick="showSection('webhooks', this)">Webhooks</a>
+    <a href="#" onclick="showSection('webhooks', this)">Integracoes</a>
   </nav>
   <button class="logout-btn" onclick="logout()">Sair</button>
 </div>
@@ -392,70 +392,101 @@
     </div>
   </div>
 
-  <!-- WEBHOOKS -->
+  <!-- INTEGRACOES -->
   <div id="section-webhooks" style="display:none;">
-    <h1 style="font-size: 24px; color: #1f2937; margin-bottom: 24px;">Webhooks</h1>
+    <h1 style="font-size: 24px; color: #1f2937; margin-bottom: 24px;">Integracoes</h1>
 
-    <div class="card">
-      <h2>Shopify</h2>
-      <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">
-        Configure este URL no painel Shopify em Settings &gt; Notifications &gt; Webhooks. Evento: <strong>Order creation</strong>
-      </p>
-      <div class="webhook-url" id="webhook-shopify">-</div>
-      <button class="copy-btn" onclick="copiarWebhook('shopify')">Copiar</button>
-    </div>
+    <!-- Status da conexao -->
+    <div class="card" id="integracao-status">
+      <div id="integracao-conectada" style="display:none;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+          <div style="width: 12px; height: 12px; border-radius: 50%; background: #10b981;"></div>
+          <h2 style="margin: 0;" id="integracao-nome">Plataforma conectada</h2>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;" id="integracao-info">-</p>
+        <p style="font-size: 14px; color: #374151; margin-top: 8px;"><strong id="integracao-pedidos">0</strong> pedidos importados</p>
+        <button onclick="desconectar()" style="margin-top: 16px; padding: 10px 20px; background: #fee2e2; color: #dc2626; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Desconectar</button>
+      </div>
 
-    <div class="card" style="margin-top: 16px;">
-      <h2>Yampi</h2>
-      <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">
-        Configure este URL no painel Yampi em Configuracoes &gt; Webhooks. Evento: <strong>Pedido pago</strong>
-      </p>
-      <div class="webhook-url" id="webhook-yampi">-</div>
-      <button class="copy-btn" onclick="copiarWebhook('yampi')">Copiar</button>
-    </div>
+      <div id="integracao-desconectada">
+        <h2>Conecte sua plataforma</h2>
+        <p style="font-size: 14px; color: #6b7280; margin-bottom: 24px;">
+          Webhook criado automaticamente + pedidos dos ultimos 30 dias importados.
+        </p>
 
-    <div class="card" style="margin-top: 16px;">
-      <h2>Shopify — Configuracao</h2>
-      <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">
-        Para criar cupons reais na Shopify e verificar webhooks.
-      </p>
-      <div style="display: grid; gap: 12px; max-width: 500px;">
-        <div>
-          <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Store URL (ex: minha-loja.myshopify.com)</label>
-          <input type="text" id="cfg-shopify-store" placeholder="minha-loja.myshopify.com" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        <!-- Shopify connect -->
+        <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+            <div style="width: 40px; height: 40px; background: #96bf48; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px;">S</div>
+            <div>
+              <h3 style="font-size: 16px; margin: 0;">Shopify</h3>
+              <p style="font-size: 13px; color: #6b7280; margin: 0;">Conecte via Admin API Access Token</p>
+            </div>
+          </div>
+          <div id="form-shopify" style="display: grid; gap: 12px; max-width: 500px;">
+            <div>
+              <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Store URL</label>
+              <input type="text" id="cfg-shopify-store" placeholder="minha-loja.myshopify.com" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+            </div>
+            <div>
+              <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Access Token (Admin API)</label>
+              <input type="password" id="cfg-shopify-token" placeholder="shpat_xxxxxxxxxxxx" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+              <small style="color: #9ca3af; font-size: 12px;">Shopify Admin > Apps > Develop apps > Create an app > Admin API access token</small>
+            </div>
+            <button id="btn-connect-shopify" onclick="conectarShopify()" style="padding: 12px 24px; background: #96bf48; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Conectar Shopify</button>
+            <div id="shopify-result" style="display:none; padding: 12px; border-radius: 8px; font-size: 14px;"></div>
+          </div>
         </div>
-        <div>
-          <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Access Token (Admin API)</label>
-          <input type="password" id="cfg-shopify-token" placeholder="shpat_xxxxxxxxxxxx" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+
+        <!-- Yampi connect -->
+        <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+            <div style="width: 40px; height: 40px; background: #ff6b35; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px;">Y</div>
+            <div>
+              <h3 style="font-size: 16px; margin: 0;">Yampi</h3>
+              <p style="font-size: 13px; color: #6b7280; margin: 0;">Conecte via API Token</p>
+            </div>
+          </div>
+          <div id="form-yampi" style="display: grid; gap: 12px; max-width: 500px;">
+            <div>
+              <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Alias da loja</label>
+              <input type="text" id="cfg-yampi-alias" placeholder="minha-loja" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+              <small style="color: #9ca3af; font-size: 12px;">Slug da loja na Yampi (aparece na URL do painel)</small>
+            </div>
+            <div>
+              <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">User Token</label>
+              <input type="password" id="cfg-yampi-token" placeholder="Token do usuario" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+            </div>
+            <div>
+              <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Secret Key</label>
+              <input type="password" id="cfg-yampi-secret" placeholder="Secret key" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+              <small style="color: #9ca3af; font-size: 12px;">Yampi > Configuracoes > Chaves de API</small>
+            </div>
+            <button id="btn-connect-yampi" onclick="conectarYampi()" style="padding: 12px 24px; background: #ff6b35; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Conectar Yampi</button>
+            <div id="yampi-result" style="display:none; padding: 12px; border-radius: 8px; font-size: 14px;"></div>
+          </div>
         </div>
-        <div>
-          <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Webhook Secret (opcional)</label>
-          <input type="text" id="cfg-shopify-secret" placeholder="shpss_xxxxxxxxxxxx" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
-        </div>
-        <button onclick="salvarShopifyConfig()" style="padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Salvar Configuracao Shopify</button>
       </div>
     </div>
 
+    <!-- Widget -->
     <div class="card" style="margin-top: 16px;">
-      <h2>Yampi — Configuracao</h2>
+      <h2>Widget para sua loja</h2>
       <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">
-        Para criar cupons reais na Yampi ao resolver solicitacoes.
+        Cole este codigo no HTML da sua loja para exibir o botao de trocas.
       </p>
-      <div style="display: grid; gap: 12px; max-width: 500px;">
-        <div>
-          <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Alias da loja (slug Yampi)</label>
-          <input type="text" id="cfg-yampi-alias" placeholder="minha-loja" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
-        </div>
-        <div>
-          <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">User Token</label>
-          <input type="password" id="cfg-yampi-token" placeholder="Token do usuario Yampi" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
-        </div>
-        <div>
-          <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Secret Key</label>
-          <input type="password" id="cfg-yampi-secret" placeholder="Secret key do usuario Yampi" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
-        </div>
-        <button onclick="salvarYampiConfig()" style="padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Salvar Configuracao Yampi</button>
-      </div>
+      <div class="webhook-url" id="widget-code" style="font-size: 12px;"></div>
+      <button class="copy-btn" onclick="copiarWidget()" style="margin-top: 8px;">Copiar codigo</button>
+    </div>
+
+    <!-- Portal link -->
+    <div class="card" style="margin-top: 16px;">
+      <h2>Link do portal</h2>
+      <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">
+        Compartilhe com seus clientes para abrirem solicitacoes.
+      </p>
+      <div class="webhook-url" id="portal-link">-</div>
+      <button class="copy-btn" onclick="copiarPortal()" style="margin-top: 8px;">Copiar link</button>
     </div>
   </div>
 
@@ -915,64 +946,141 @@
     }
   }
 
-  // ==================== WEBHOOKS ====================
+  // ==================== INTEGRACOES ====================
   function setupWebhookUrls() {
     const baseUrl = window.location.origin;
-    document.getElementById('webhook-shopify').textContent = `${baseUrl}/api/webhooks?platform=shopify&tenant_id=${TENANT.id}`;
-    document.getElementById('webhook-yampi').textContent = `${baseUrl}/api/webhooks?platform=yampi&tenant_id=${TENANT.id}`;
+    document.getElementById('widget-code').textContent = `<script src="${baseUrl}/widget.js" data-tenant="${TENANT.slug}"><\/script>`;
+    document.getElementById('portal-link').textContent = `${baseUrl}/portal/${TENANT.slug}`;
+    carregarStatusIntegracao();
   }
 
-  function copiarWebhook(platform) {
-    const el = document.getElementById(`webhook-${platform}`);
-    navigator.clipboard.writeText(el.textContent).then(() => {
-      alert('URL copiada!');
-    });
+  function copiarWidget() {
+    navigator.clipboard.writeText(document.getElementById('widget-code').textContent)
+      .then(() => alert('Codigo copiado!'));
   }
 
-  async function salvarShopifyConfig() {
-    const configs = {};
-    const store = document.getElementById('cfg-shopify-store').value.trim();
-    const token = document.getElementById('cfg-shopify-token').value.trim();
-    const secret = document.getElementById('cfg-shopify-secret').value.trim();
+  function copiarPortal() {
+    navigator.clipboard.writeText(document.getElementById('portal-link').textContent)
+      .then(() => alert('Link copiado!'));
+  }
 
-    if (store) configs.shopify_store = store;
-    if (token) configs.shopify_access_token = token;
-    if (secret) configs.shopify_webhook_secret = secret;
-
-    if (Object.keys(configs).length === 0) return alert('Preencha pelo menos um campo.');
-
+  async function carregarStatusIntegracao() {
     try {
-      await fetch(`/api/tenants?tenant_id=${TENANT.id}`, {
-        method: 'PUT',
+      const res = await fetch('/api/integracoes', {
+        method: 'POST',
         headers: headers(),
-        body: JSON.stringify({ configs })
+        body: JSON.stringify({ action: 'status' })
       });
-      alert('Configuracao Shopify salva!');
+      const data = await res.json();
+
+      if (data.connected && data.platform) {
+        document.getElementById('integracao-conectada').style.display = 'block';
+        document.getElementById('integracao-desconectada').style.display = 'none';
+
+        const plat = data.platform.platform;
+        const label = plat === 'shopify' ? 'Shopify' : 'Yampi';
+        const detail = data.platform.store || data.platform.alias;
+        document.getElementById('integracao-nome').textContent = `${label} conectada`;
+        document.getElementById('integracao-info').textContent = detail;
+        document.getElementById('integracao-pedidos').textContent = data.orders_count;
+      } else {
+        document.getElementById('integracao-conectada').style.display = 'none';
+        document.getElementById('integracao-desconectada').style.display = 'block';
+      }
     } catch (err) {
-      alert('Erro: ' + err.message);
+      console.error('Erro status integracao:', err);
     }
   }
 
-  // ==================== YAMPI CONFIG ====================
-  async function salvarYampiConfig() {
-    const configs = {};
+  async function conectarShopify() {
+    const store = document.getElementById('cfg-shopify-store').value.trim();
+    const token = document.getElementById('cfg-shopify-token').value.trim();
+    const resultEl = document.getElementById('shopify-result');
+    const btn = document.getElementById('btn-connect-shopify');
+
+    if (!store || !token) { alert('Preencha store URL e access token.'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Conectando...';
+    resultEl.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/integracoes', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ action: 'connect-shopify', store, access_token: token })
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error);
+
+      resultEl.style.display = 'block';
+      resultEl.style.background = '#d1fae5';
+      resultEl.style.color = '#065f46';
+      resultEl.textContent = data.message;
+
+      setTimeout(() => carregarStatusIntegracao(), 1000);
+    } catch (err) {
+      resultEl.style.display = 'block';
+      resultEl.style.background = '#fee2e2';
+      resultEl.style.color = '#991b1b';
+      resultEl.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Conectar Shopify';
+    }
+  }
+
+  async function conectarYampi() {
     const alias = document.getElementById('cfg-yampi-alias').value.trim();
     const token = document.getElementById('cfg-yampi-token').value.trim();
     const secret = document.getElementById('cfg-yampi-secret').value.trim();
+    const resultEl = document.getElementById('yampi-result');
+    const btn = document.getElementById('btn-connect-yampi');
 
-    if (alias) configs.yampi_alias = alias;
-    if (token) configs.yampi_token = token;
-    if (secret) configs.yampi_secret_key = secret;
+    if (!alias || !token || !secret) { alert('Preencha todos os campos.'); return; }
 
-    if (Object.keys(configs).length === 0) return alert('Preencha pelo menos um campo.');
+    btn.disabled = true;
+    btn.textContent = 'Conectando...';
+    resultEl.style.display = 'none';
 
     try {
-      await fetch(`/api/tenants?tenant_id=${TENANT.id}`, {
-        method: 'PUT',
+      const res = await fetch('/api/integracoes', {
+        method: 'POST',
         headers: headers(),
-        body: JSON.stringify({ configs })
+        body: JSON.stringify({ action: 'connect-yampi', alias, user_token: token, secret_key: secret })
       });
-      alert('Configuracao Yampi salva!');
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error);
+
+      resultEl.style.display = 'block';
+      resultEl.style.background = '#d1fae5';
+      resultEl.style.color = '#065f46';
+      resultEl.textContent = data.message;
+
+      setTimeout(() => carregarStatusIntegracao(), 1000);
+    } catch (err) {
+      resultEl.style.display = 'block';
+      resultEl.style.background = '#fee2e2';
+      resultEl.style.color = '#991b1b';
+      resultEl.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Conectar Yampi';
+    }
+  }
+
+  async function desconectar() {
+    if (!confirm('Desconectar plataforma? Os pedidos importados permanecem.')) return;
+
+    try {
+      await fetch('/api/integracoes', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ action: 'disconnect' })
+      });
+      carregarStatusIntegracao();
     } catch (err) {
       alert('Erro: ' + err.message);
     }

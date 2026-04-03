@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>troqueAI — Trocas e devoluções no piloto automático</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; color: #1f2937; }
+
+    .hero {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 40%, #a78bfa 100%);
+      display: flex; flex-direction: column;
+    }
+
+    nav {
+      padding: 20px 40px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    nav .logo { font-size: 24px; font-weight: 800; color: white; text-decoration: none; }
+    nav .logo span { opacity: 0.8; }
+    nav .nav-links { display: flex; gap: 24px; align-items: center; }
+    nav .nav-links a {
+      color: rgba(255,255,255,0.85); text-decoration: none; font-size: 15px; font-weight: 500;
+    }
+    nav .nav-links a:hover { color: white; }
+    .btn-login {
+      padding: 10px 24px; background: rgba(255,255,255,0.15); color: white;
+      border: 1px solid rgba(255,255,255,0.3); border-radius: 8px;
+      font-size: 14px; font-weight: 600; text-decoration: none;
+    }
+    .btn-login:hover { background: rgba(255,255,255,0.25); }
+
+    .hero-content {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 60px 40px;
+    }
+    .hero-text { max-width: 640px; text-align: center; }
+    .hero-text h1 {
+      font-size: 52px; font-weight: 800; color: white; line-height: 1.1;
+      margin-bottom: 20px;
+    }
+    .hero-text p {
+      font-size: 20px; color: rgba(255,255,255,0.85); line-height: 1.6;
+      margin-bottom: 36px;
+    }
+    .hero-cta {
+      display: inline-block; padding: 16px 40px;
+      background: white; color: #6366f1; border-radius: 12px;
+      font-size: 18px; font-weight: 700; text-decoration: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .hero-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.2); }
+    .hero-sub {
+      margin-top: 16px; font-size: 14px; color: rgba(255,255,255,0.6);
+    }
+
+    /* Features */
+    .features {
+      padding: 80px 40px; background: white;
+    }
+    .features h2 {
+      text-align: center; font-size: 36px; font-weight: 800;
+      margin-bottom: 12px;
+    }
+    .features .subtitle {
+      text-align: center; font-size: 18px; color: #6b7280;
+      margin-bottom: 60px;
+    }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 32px; max-width: 1000px; margin: 0 auto;
+    }
+    .feature-card {
+      padding: 32px; border-radius: 16px;
+      background: #f9fafb; border: 1px solid #f3f4f6;
+    }
+    .feature-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; margin-bottom: 16px;
+    }
+    .feature-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p { font-size: 15px; color: #6b7280; line-height: 1.6; }
+
+    /* How it works */
+    .how {
+      padding: 80px 40px; background: #f9fafb;
+    }
+    .how h2 { text-align: center; font-size: 36px; font-weight: 800; margin-bottom: 60px; }
+    .steps {
+      display: flex; gap: 40px; max-width: 900px; margin: 0 auto;
+      flex-wrap: wrap; justify-content: center;
+    }
+    .step {
+      flex: 1; min-width: 200px; max-width: 260px; text-align: center;
+    }
+    .step-number {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: #6366f1; color: white; font-size: 20px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .step h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .step p { font-size: 14px; color: #6b7280; line-height: 1.5; }
+
+    /* CTA */
+    .cta-section {
+      padding: 80px 40px; text-align: center;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    }
+    .cta-section h2 { font-size: 36px; font-weight: 800; color: white; margin-bottom: 16px; }
+    .cta-section p { font-size: 18px; color: rgba(255,255,255,0.8); margin-bottom: 32px; }
+    .cta-section .hero-cta { font-size: 16px; padding: 14px 36px; }
+
+    /* Footer */
+    footer {
+      padding: 32px 40px; text-align: center;
+      font-size: 14px; color: #9ca3af; background: #1f2937;
+    }
+    footer a { color: #818cf8; text-decoration: none; }
+
+    @media (max-width: 768px) {
+      .hero-text h1 { font-size: 32px; }
+      .hero-text p { font-size: 16px; }
+      nav { padding: 16px 20px; }
+      .hero-content { padding: 40px 20px; }
+      .features, .how, .cta-section { padding: 60px 20px; }
+      .features h2, .how h2, .cta-section h2 { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <nav>
+    <a href="/" class="logo">troque<span>AI</span></a>
+    <div class="nav-links">
+      <a href="#features">Recursos</a>
+      <a href="#como-funciona">Como funciona</a>
+      <a href="/admin" class="btn-login">Entrar</a>
+    </div>
+  </nav>
+
+  <div class="hero-content">
+    <div class="hero-text">
+      <h1>Trocas e devoluções no piloto automático</h1>
+      <p>
+        Seu cliente resolve sozinho, sem abrir ticket.
+        Você gerencia tudo em um painel simples.
+        Conecta em 2 minutos com Shopify ou Yampi.
+      </p>
+      <a href="/admin" class="hero-cta">Criar conta gratis</a>
+      <p class="hero-sub">Sem cartão de crédito. Setup em 2 minutos.</p>
+    </div>
+  </div>
+</div>
+
+<section class="features" id="features">
+  <h2>Tudo que você precisa</h2>
+  <p class="subtitle">Para transformar trocas de dor de cabeça em experiência 5 estrelas</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon" style="background: #ede9fe; color: #6366f1;">&#9889;</div>
+      <h3>Conexão em 1 clique</h3>
+      <p>Conecte Shopify ou Yampi, webhooks e pedidos são importados automaticamente. Sem copiar/colar URLs.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background: #d1fae5; color: #059669;">&#128100;</div>
+      <h3>Portal self-service</h3>
+      <p>Seu cliente busca o pedido por CPF ou email, seleciona itens e acompanha o status. 24h, sem SAC.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background: #dbeafe; color: #2563eb;">&#128230;</div>
+      <h3>Logística reversa</h3>
+      <p>Código de postagem gerado automaticamente ao aprovar. Integração com Correios pronta.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background: #fef3c7; color: #d97706;">&#127873;</div>
+      <h3>Cupons automáticos</h3>
+      <p>Gere vale-troca com 1 clique. O cupom é criado direto na Shopify ou Yampi automaticamente.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background: #fce7f3; color: #db2777;">&#128140;</div>
+      <h3>Widget para sua loja</h3>
+      <p>Cole uma linha de código e o botão de trocas aparece na sua loja. Portal embutido em iframe.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon" style="background: #e0e7ff; color: #4338ca;">&#128202;</div>
+      <h3>Dashboard completo</h3>
+      <p>Métricas em tempo real, filtros por status e tipo, exportação CSV. Tudo num painel limpo.</p>
+    </div>
+  </div>
+</section>
+
+<section class="how" id="como-funciona">
+  <h2>Como funciona</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-number">1</div>
+      <h3>Crie sua conta</h3>
+      <p>Nome da loja, email e senha. Pronto em 30 segundos.</p>
+    </div>
+    <div class="step">
+      <div class="step-number">2</div>
+      <h3>Conecte sua plataforma</h3>
+      <p>Shopify ou Yampi. Pedidos dos últimos 30 dias são importados automaticamente.</p>
+    </div>
+    <div class="step">
+      <div class="step-number">3</div>
+      <h3>Compartilhe o portal</h3>
+      <p>Seu cliente acessa, busca o pedido e abre a solicitação sozinho.</p>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section">
+  <h2>Comece agora, é grátis</h2>
+  <p>Monte sua operação de trocas em menos de 5 minutos.</p>
+  <a href="/admin" class="hero-cta">Criar minha loja</a>
+</section>
+
+<footer>
+  <p>troqueAI &copy; 2026 — Feito para e-commerce brasileiro. <a href="https://github.com/fabio-cmyk/troqueAI">GitHub</a></p>
+</footer>
+
+</body>
+</html>

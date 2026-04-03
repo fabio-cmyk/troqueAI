@@ -23,6 +23,7 @@ app.all('/api/portal', require('./api/portal'));
 app.all('/api/tenants', require('./api/tenants'));
 app.all('/api/dashboard', require('./api/dashboard'));
 app.all('/api/webhooks', require('./api/webhooks'));
+app.all('/api/integracoes', require('./api/integracoes'));
 
 // Widget (embeddable JS)
 app.get('/widget.js', (req, res) => {
@@ -32,6 +33,7 @@ app.get('/widget.js', (req, res) => {
 });
 
 // Frontend routes
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public/admin/index.html')));
 app.get('/admin/*', (req, res) => res.sendFile(path.join(__dirname, 'public/admin/index.html')));
 app.get('/portal/:tenant', (req, res) => res.sendFile(path.join(__dirname, 'public/portal/index.html')));
