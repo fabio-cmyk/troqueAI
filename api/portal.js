@@ -43,8 +43,9 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Limpar CPF (remover pontos e tracos)
-    const idLimpo = identificador ? identificador.replace(/[.\-\/]/g, '').trim() : '';
+    // Limpar CPF (remover pontos e tracos) — so se nao for email
+    const idRaw = (identificador || '').trim();
+    const idLimpo = idRaw.includes('@') ? idRaw.toLowerCase() : idRaw.replace(/[.\-\/]/g, '');
 
     // Buscar solicitacoes do cliente (nao precisa do numero do pedido)
     if (action === 'solicitacoes') {
