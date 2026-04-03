@@ -183,6 +183,43 @@ module.exports = async function handler(req, res) {
       });
     }
 
+    // ==================== IMPORT ORDERS (paginado) ====================
+    if (action === 'import-orders') {
+      const config = await buscarConfiguracoes(tenantId);
+      const platform = config.plataforma_conectada;
+
+      if (!platform) {
+        return res.status(400).json({ error: 'Nenhuma plataforma conectada.' });
+      }
+
+      const cursor = req.body.cursor || null; // URL da proxima pagina ou numero da pagina
+
+      if (platform === 'shopify') {
+        const store = config.shopify_store;
+        const accessToken = config.shopify_access_token;
+        if (!store || !accessToken) {
+          return res.status(400).json({ error: 'Credenciais Shopify nao encontradas.' });
+        }
+
+        const result = await importShopifyOrdersBatch(tenantId, store, accessToken, cursor);
+        return res.json(result);
+      }
+
+      if (platform === 'yampi') {
+        const alias = config.yampi_alias;
+        const yampiHeaders = {
+          'User-Token': config.yampi_token,
+          'User-Secret-Key': config.yampi_secret_key,
+          'Content-Type': 'application/json'
+        };
+
+        const result = await importYampiOrdersBatch(tenantId, alias, yampiHeaders, cursor);
+        return res.json(result);
+      }
+
+      return res.status(400).json({ error: 'Plataforma nao suportada.' });
+    }
+
     return res.status(400).json({ error: 'action invalida' });
   } catch (error) {
     console.error('Erro em /api/integracoes:', error);
@@ -325,6 +362,136 @@ async function importYampiOrders(tenantId, alias, headers) {
 
   console.log(`[YAMPI] ${count} pedidos importados para tenant ${tenantId}`);
   return { count };
+}
+
+/**
+ * Import Shopify orders — 1 pagina por chamada (max 250 pedidos)
+ */
+async function importShopifyOrdersBatch(tenantId, store, accessToken, cursor) {
+  const baseUrl = `https://${store}/admin/api/2024-01`;
+  const headers = { 'X-Shopify-Access-Token': accessToken };
+  const since = new Date(Date.now() - 30 * 86400000).toISOString();
+
+  const pageUrl = cursor || `${baseUrl}/orders.json?created_at_min=${since}&status=any&limit=250`;
+
+  try {
+    const res = await axios.get(pageUrl, { headers, timeout: 25000 });
+    const orders = res.data.orders || [];
+    let count = 0;
+
+    for (const order of orders) {
+      const customer = order.customer || {};
+      const items = (order.line_items || []).map(item => ({
+        name: item.title || item.name,
+        quantity: item.quantity,
+        price: item.price,
+        sku: item.sku || '',
+        variant_title: item.variant_title || ''
+      }));
+
+      let cpf = '';
+      if (order.note_attributes) {
+        const cpfAttr = order.note_attributes.find(a =>
+          a.name.toLowerCase().includes('cpf') || a.name.toLowerCase().includes('documento')
+        );
+        if (cpfAttr) cpf = cpfAttr.value.replace(/[.\-\/]/g, '');
+      }
+
+      const pedido = {
+        tenant_id: tenantId,
+        order_number: String(order.order_number || order.name || order.id),
+        platform_order_id: String(order.id),
+        platform: 'shopify',
+        customer_name: `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
+        customer_email: customer.email || order.email || '',
+        customer_cpf: cpf,
+        items: JSON.stringify(items),
+        total_value: parseFloat(order.total_price || 0),
+        status: mapShopifyStatus(order.financial_status, order.fulfillment_status),
+        raw_payload: order
+      };
+
+      const { error } = await supabase
+        .from('pedidos')
+        .upsert(pedido, { onConflict: 'tenant_id,order_number' });
+      if (!error) count++;
+    }
+
+    // Proxima pagina
+    const linkHeader = res.headers?.link || '';
+    const nextMatch = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
+    const nextCursor = nextMatch ? nextMatch[1] : null;
+
+    return {
+      imported: count,
+      has_more: !!nextCursor,
+      cursor: nextCursor,
+      total_in_page: orders.length
+    };
+  } catch (err) {
+    console.error('[SHOPIFY] Erro batch import:', err.message);
+    return { imported: 0, has_more: false, error: err.message };
+  }
+}
+
+/**
+ * Import Yampi orders — 1 pagina por chamada (50 por pagina)
+ */
+async function importYampiOrdersBatch(tenantId, alias, headers, cursor) {
+  const since = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const page = cursor ? parseInt(cursor) : 1;
+
+  try {
+    const res = await axios.get(
+      `https://api.dooki.com.br/v2/${alias}/orders?created_at_start=${since}&page=${page}&limit=50`,
+      { headers, timeout: 25000 }
+    );
+
+    const orders = res.data.data || [];
+    let count = 0;
+
+    for (const order of orders) {
+      const customer = order.customer || {};
+      const items = (order.items || order.line_items || []).map(item => ({
+        name: item.name || item.product_name,
+        quantity: item.quantity,
+        price: String(item.price || item.unit_price || 0),
+        sku: item.sku || ''
+      }));
+
+      const pedido = {
+        tenant_id: tenantId,
+        order_number: String(order.number || order.id),
+        platform_order_id: String(order.id),
+        platform: 'yampi',
+        customer_name: customer.name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
+        customer_email: customer.email || '',
+        customer_cpf: (customer.cpf || customer.document || '').replace(/[.\-\/]/g, ''),
+        items: JSON.stringify(items),
+        total_value: parseFloat(order.total || order.amount || 0),
+        status: mapYampiStatus(order.status),
+        raw_payload: order
+      };
+
+      const { error } = await supabase
+        .from('pedidos')
+        .upsert(pedido, { onConflict: 'tenant_id,order_number' });
+      if (!error) count++;
+    }
+
+    const lastPage = res.data.meta?.last_page || 1;
+    const hasMore = page < lastPage;
+
+    return {
+      imported: count,
+      has_more: hasMore,
+      cursor: hasMore ? String(page + 1) : null,
+      total_in_page: orders.length
+    };
+  } catch (err) {
+    console.error('[YAMPI] Erro batch import:', err.message);
+    return { imported: 0, has_more: false, error: err.message };
+  }
 }
 
 function mapShopifyStatus(financial, fulfillment) {

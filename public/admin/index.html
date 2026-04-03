@@ -453,8 +453,17 @@
           <h2 style="margin: 0;" id="integracao-nome">Plataforma conectada</h2>
         </div>
         <p style="font-size: 14px; color: #6b7280;" id="integracao-info">-</p>
-        <p style="font-size: 14px; color: #374151; margin-top: 8px;"><strong id="integracao-pedidos">0</strong> pedidos importados</p>
-        <button onclick="desconectar()" style="margin-top: 16px; padding: 10px 20px; background: #fee2e2; color: #dc2626; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Desconectar</button>
+        <p style="font-size: 14px; color: #374151; margin-top: 8px;"><strong id="integracao-pedidos">0</strong> pedidos na base</p>
+        <div style="display: flex; gap: 8px; margin-top: 16px;">
+          <button onclick="iniciarImportacao()" id="btn-reimportar" style="padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Reimportar pedidos</button>
+          <button onclick="desconectar()" style="padding: 10px 20px; background: #fee2e2; color: #dc2626; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Desconectar</button>
+        </div>
+        <div id="import-progress" style="display:none; margin-top: 16px; padding: 16px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+          <p style="font-size: 14px; color: #065f46; margin: 0;" id="import-status">Importando pedidos...</p>
+          <div style="background: #dcfce7; border-radius: 4px; height: 8px; margin-top: 8px; overflow: hidden;">
+            <div id="import-bar" style="background: #10b981; height: 100%; width: 0%; transition: width 0.3s;"></div>
+          </div>
+        </div>
       </div>
 
       <div id="integracao-desconectada">
@@ -1171,6 +1180,55 @@
     }
   }
 
+  async function iniciarImportacao(shopName) {
+    const progressEl = document.getElementById('import-progress');
+    const statusEl = document.getElementById('import-status');
+    const barEl = document.getElementById('import-bar');
+    const btnEl = document.getElementById('btn-reimportar');
+
+    progressEl.style.display = 'block';
+    if (btnEl) btnEl.disabled = true;
+    statusEl.textContent = 'Importando pedidos...';
+    barEl.style.width = '10%';
+
+    let cursor = null;
+    let totalImported = 0;
+    let batch = 0;
+
+    try {
+      while (true) {
+        batch++;
+        statusEl.textContent = `Importando... ${totalImported} pedidos (lote ${batch})`;
+        barEl.style.width = Math.min(10 + batch * 15, 90) + '%';
+
+        const res = await fetch('/api/integracoes', {
+          method: 'POST',
+          headers: headers(),
+          body: JSON.stringify({ action: 'import-orders', cursor })
+        });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Erro na importacao');
+
+        totalImported += data.imported || 0;
+
+        if (!data.has_more) break;
+        cursor = data.cursor;
+      }
+
+      barEl.style.width = '100%';
+      statusEl.textContent = `Importacao concluida! ${totalImported} pedidos importados.`;
+      carregarStatusIntegracao();
+    } catch (err) {
+      statusEl.textContent = `Erro: ${err.message}. ${totalImported} pedidos importados ate agora.`;
+      progressEl.style.background = '#fef2f2';
+      progressEl.style.borderColor = '#fecaca';
+      statusEl.style.color = '#991b1b';
+    } finally {
+      if (btnEl) btnEl.disabled = false;
+    }
+  }
+
   async function desconectar() {
     if (!confirm('Desconectar plataforma? Os pedidos importados permanecem.')) return;
 
@@ -1285,14 +1343,11 @@
     const params = new URLSearchParams(window.location.search);
     if (params.get('shopify') === 'connected') {
       const shop = params.get('shop') || 'Shopify';
-      const orders = params.get('orders') || '0';
-      setTimeout(() => {
-        alert(`${shop} conectada com sucesso! ${orders} pedidos importados.`);
-        // Ir direto para integracoes
-        showSection('webhooks', document.querySelector('.sidebar nav a:nth-child(5)'));
-      }, 500);
-      // Limpar URL
       history.replaceState(null, '', '/admin');
+      setTimeout(() => {
+        showSection('webhooks', document.querySelector('.sidebar nav a:nth-child(5)'));
+        iniciarImportacao(shop);
+      }, 500);
     } else if (params.get('shopify') === 'error') {
       const msg = params.get('message') || 'Erro ao conectar Shopify.';
       setTimeout(() => alert('Erro: ' + msg), 500);
