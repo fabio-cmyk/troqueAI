@@ -414,27 +414,23 @@
           Webhook criado automaticamente + pedidos dos ultimos 30 dias importados.
         </p>
 
-        <!-- Shopify connect -->
+        <!-- Shopify connect (OAuth) -->
         <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 16px;">
           <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
             <div style="width: 40px; height: 40px; background: #96bf48; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px;">S</div>
             <div>
               <h3 style="font-size: 16px; margin: 0;">Shopify</h3>
-              <p style="font-size: 13px; color: #6b7280; margin: 0;">Conecte via Admin API Access Token</p>
+              <p style="font-size: 13px; color: #6b7280; margin: 0;">Conecte via OAuth — autorize direto no Shopify</p>
             </div>
           </div>
           <div id="form-shopify" style="display: grid; gap: 12px; max-width: 500px;">
             <div>
               <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Store URL</label>
               <input type="text" id="cfg-shopify-store" placeholder="minha-loja.myshopify.com" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
-            </div>
-            <div>
-              <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Access Token (Admin API)</label>
-              <input type="password" id="cfg-shopify-token" placeholder="shpat_xxxxxxxxxxxx" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
-              <small style="color: #9ca3af; font-size: 12px;">Shopify Admin > Apps > Develop apps > Create an app > Admin API access token</small>
+              <small style="color: #9ca3af; font-size: 12px;">O endereco .myshopify.com da sua loja</small>
             </div>
             <button id="btn-connect-shopify" onclick="conectarShopify()" style="padding: 12px 24px; background: #96bf48; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Conectar Shopify</button>
-            <div id="shopify-result" style="display:none; padding: 12px; border-radius: 8px; font-size: 14px;"></div>
+            <p style="font-size: 12px; color: #9ca3af;">Voce sera redirecionado para autorizar o acesso no Shopify. Webhooks e pedidos sao configurados automaticamente.</p>
           </div>
         </div>
 
@@ -992,43 +988,19 @@
     }
   }
 
-  async function conectarShopify() {
+  function conectarShopify() {
     const store = document.getElementById('cfg-shopify-store').value.trim();
-    const token = document.getElementById('cfg-shopify-token').value.trim();
-    const resultEl = document.getElementById('shopify-result');
-    const btn = document.getElementById('btn-connect-shopify');
 
-    if (!store || !token) { alert('Preencha store URL e access token.'); return; }
+    if (!store) { alert('Digite a URL da sua loja Shopify.'); return; }
 
-    btn.disabled = true;
-    btn.textContent = 'Conectando...';
-    resultEl.style.display = 'none';
-
-    try {
-      const res = await fetch('/api/integracoes', {
-        method: 'POST',
-        headers: headers(),
-        body: JSON.stringify({ action: 'connect-shopify', store, access_token: token })
-      });
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.error);
-
-      resultEl.style.display = 'block';
-      resultEl.style.background = '#d1fae5';
-      resultEl.style.color = '#065f46';
-      resultEl.textContent = data.message;
-
-      setTimeout(() => carregarStatusIntegracao(), 1000);
-    } catch (err) {
-      resultEl.style.display = 'block';
-      resultEl.style.background = '#fee2e2';
-      resultEl.style.color = '#991b1b';
-      resultEl.textContent = err.message;
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Conectar Shopify';
+    // Garantir que tem .myshopify.com
+    let cleanStore = store.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    if (!cleanStore.includes('.myshopify.com')) {
+      cleanStore += '.myshopify.com';
     }
+
+    // Redirecionar para o fluxo OAuth
+    window.location.href = `/api/shopify-auth?store=${encodeURIComponent(cleanStore)}&token=${AUTH_TOKEN}`;
   }
 
   async function conectarYampi() {
@@ -1180,6 +1152,25 @@
   });
 
   // ==================== INIT ====================
+  // Checar resultado do OAuth Shopify (redirect de volta)
+  (function checkOAuthResult() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('shopify') === 'connected') {
+      const shop = params.get('shop') || 'Shopify';
+      setTimeout(() => {
+        alert(`${shop} conectada com sucesso! Pedidos estao sendo importados.`);
+        // Ir direto para integracoes
+        showSection('webhooks', document.querySelector('.sidebar nav a:nth-child(4)'));
+      }, 500);
+      // Limpar URL
+      history.replaceState(null, '', '/admin');
+    } else if (params.get('shopify') === 'error') {
+      const msg = params.get('message') || 'Erro ao conectar Shopify.';
+      setTimeout(() => alert('Erro: ' + msg), 500);
+      history.replaceState(null, '', '/admin');
+    }
+  })();
+
   checkAuth();
 </script>
 
