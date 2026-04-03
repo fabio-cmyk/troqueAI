@@ -2,6 +2,12 @@
   "functions": {
     "api/**/*.js": {
       "maxDuration": 30
+    },
+    "api/shopify-callback.js": {
+      "maxDuration": 60
+    },
+    "api/integracoes.js": {
+      "maxDuration": 60
     }
   },
   "rewrites": [

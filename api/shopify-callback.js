@@ -99,13 +99,17 @@ module.exports = async function handler(req, res) {
       console.error('[SHOPIFY OAUTH] Erro criando webhook:', err.response?.data || err.message);
     }
 
-    // Importar pedidos dos ultimos 30 dias (async, nao bloqueia redirect)
-    importOrders(tenantId, shop, accessToken).catch(err => {
+    // Importar pedidos dos ultimos 30 dias (SYNC — precisa terminar antes do redirect)
+    let ordersImported = 0;
+    try {
+      const result = await importOrders(tenantId, shop, accessToken);
+      ordersImported = result;
+    } catch (err) {
       console.error('[SHOPIFY OAUTH] Erro importando pedidos:', err.message);
-    });
+    }
 
     // Redirecionar de volta pro admin com sucesso
-    const adminUrl = `${proto}://${host}/admin?shopify=connected&shop=${encodeURIComponent(shopName)}`;
+    const adminUrl = `${proto}://${host}/admin?shopify=connected&shop=${encodeURIComponent(shopName)}&orders=${ordersImported}`;
     return res.redirect(302, adminUrl);
 
   } catch (error) {
@@ -179,6 +183,7 @@ async function importOrders(tenantId, store, accessToken) {
   }
 
   console.log(`[SHOPIFY OAUTH] ${count} pedidos importados para tenant ${tenantId}`);
+  return count;
 }
 
 function mapStatus(financial, fulfillment) {

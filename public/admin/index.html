@@ -1285,8 +1285,9 @@
     const params = new URLSearchParams(window.location.search);
     if (params.get('shopify') === 'connected') {
       const shop = params.get('shop') || 'Shopify';
+      const orders = params.get('orders') || '0';
       setTimeout(() => {
-        alert(`${shop} conectada com sucesso! Pedidos estao sendo importados.`);
+        alert(`${shop} conectada com sucesso! ${orders} pedidos importados.`);
         // Ir direto para integracoes
         showSection('webhooks', document.querySelector('.sidebar nav a:nth-child(5)'));
       }, 500);
