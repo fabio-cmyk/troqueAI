@@ -17,10 +17,12 @@ app.use((req, res, next) => {
 });
 
 // API routes
+app.all('/api/auth', require('./api/auth'));
 app.all('/api/solicitacoes', require('./api/solicitacoes'));
 app.all('/api/portal', require('./api/portal'));
 app.all('/api/tenants', require('./api/tenants'));
 app.all('/api/dashboard', require('./api/dashboard'));
+app.all('/api/webhooks', require('./api/webhooks'));
 
 // Frontend routes
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public/admin/index.html')));

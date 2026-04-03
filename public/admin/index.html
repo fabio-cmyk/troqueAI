@@ -9,6 +9,35 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Inter', sans-serif; background: #f3f4f6; min-height: 100vh; }
 
+    /* LOGIN */
+    .login-container {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+    }
+    .login-card {
+      background: white; border-radius: 16px; padding: 40px; width: 100%; max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+    .login-card h1 { font-size: 24px; color: #1f2937; margin-bottom: 8px; text-align: center; }
+    .login-card .subtitle { color: #6b7280; font-size: 14px; text-align: center; margin-bottom: 30px; }
+    .login-card .logo { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 24px; color: #1f2937; }
+    .login-card .logo span { color: #6366f1; }
+    .login-card .form-group { margin-bottom: 16px; }
+    .login-card label { display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    .login-card input {
+      width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px;
+      font-size: 15px; font-family: inherit; transition: border-color 0.2s;
+    }
+    .login-card input:focus { outline: none; border-color: #6366f1; }
+    .login-btn {
+      width: 100%; padding: 14px; background: #6366f1; color: white; border: none;
+      border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px;
+    }
+    .login-btn:hover { background: #4f46e5; }
+    .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .login-error { color: #dc2626; font-size: 13px; margin-top: 12px; text-align: center; display: none; }
+
+    /* SIDEBAR */
     .sidebar {
       position: fixed; left: 0; top: 0; bottom: 0;
       width: 240px; background: #1f2937; color: white;
@@ -25,6 +54,18 @@
       text-decoration: none; font-size: 14px; transition: all 0.2s;
     }
     .sidebar a:hover, .sidebar a.active { color: white; background: #374151; }
+    .sidebar .logout-btn {
+      position: absolute; bottom: 24px; left: 0; right: 0;
+      display: block; padding: 12px 24px; color: #ef4444;
+      text-decoration: none; font-size: 14px; cursor: pointer;
+      border: none; background: none; text-align: left; width: 100%;
+    }
+    .sidebar .logout-btn:hover { background: #374151; }
+    .sidebar .tenant-info {
+      padding: 16px 24px; border-bottom: 1px solid #374151;
+      font-size: 12px; color: #9ca3af;
+    }
+    .sidebar .tenant-info strong { color: white; font-size: 14px; display: block; margin-bottom: 2px; }
 
     .main { margin-left: 240px; padding: 32px; }
 
@@ -53,6 +94,7 @@
     th { color: #6b7280; font-weight: 600; border-bottom: 2px solid #e5e7eb; }
     td { border-bottom: 1px solid #f3f4f6; color: #374151; }
     tr:hover td { background: #f9fafb; }
+    tr { cursor: pointer; }
 
     .badge {
       display: inline-block; padding: 4px 10px; border-radius: 20px;
@@ -65,15 +107,8 @@
     .badge-resolvida { background: #d1fae5; color: #065f46; }
     .badge-rejeitada { background: #fee2e2; color: #991b1b; }
     .badge-cancelada { background: #f3f4f6; color: #6b7280; }
-
     .badge-troca { background: #dbeafe; color: #1e40af; }
     .badge-devolucao { background: #fce7f3; color: #9d174d; }
-
-    .actions button {
-      padding: 6px 12px; border: 1px solid #e5e7eb; border-radius: 6px;
-      background: white; cursor: pointer; font-size: 12px; margin-right: 4px;
-    }
-    .actions button:hover { background: #f3f4f6; }
 
     .filters {
       display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
@@ -88,21 +123,124 @@
     }
     .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
 
+    /* MODAL */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); z-index: 1000;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: white; border-radius: 16px; width: 95%; max-width: 640px;
+      max-height: 90vh; overflow-y: auto; padding: 32px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;
+    }
+    .modal-header h2 { font-size: 20px; color: #1f2937; }
+    .modal-close {
+      background: none; border: none; font-size: 24px; cursor: pointer;
+      color: #6b7280; padding: 4px 8px; border-radius: 4px;
+    }
+    .modal-close:hover { background: #f3f4f6; }
+    .detail-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;
+    }
+    .detail-item { }
+    .detail-item .dl { font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+    .detail-item .dv { font-size: 15px; color: #1f2937; }
+    .detail-full { grid-column: 1 / -1; }
+    .item-list { margin-bottom: 24px; }
+    .item-row {
+      display: flex; justify-content: space-between; padding: 10px 0;
+      border-bottom: 1px solid #f3f4f6; font-size: 14px;
+    }
+    .action-section {
+      background: #f9fafb; border-radius: 12px; padding: 20px; margin-top: 16px;
+    }
+    .action-section h3 { font-size: 16px; color: #1f2937; margin-bottom: 16px; }
+    .action-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+    .action-btn {
+      padding: 10px 20px; border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+    }
+    .action-btn:hover { opacity: 0.85; }
+    .btn-aprovar { background: #10b981; color: white; }
+    .btn-rejeitar { background: #ef4444; color: white; }
+    .btn-cupom { background: #f59e0b; color: white; }
+    .btn-postado { background: #3b82f6; color: white; }
+    .btn-recebido { background: #6366f1; color: white; }
+    .btn-resolvida { background: #059669; color: white; }
+
+    .action-form { margin-top: 16px; display: none; }
+    .action-form.active { display: block; }
+    .action-form label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+    .action-form input, .action-form textarea {
+      width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px;
+      font-size: 14px; font-family: inherit; margin-bottom: 12px;
+    }
+    .action-form .submit-action {
+      padding: 10px 24px; background: #6366f1; color: white; border: none;
+      border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+
+    .webhook-section { margin-top: 16px; }
+    .webhook-url {
+      background: #f3f4f6; padding: 12px 16px; border-radius: 8px;
+      font-family: monospace; font-size: 13px; word-break: break-all;
+      margin: 8px 0; color: #374151;
+    }
+    .copy-btn {
+      padding: 4px 12px; background: #e5e7eb; border: none; border-radius: 6px;
+      font-size: 12px; cursor: pointer; margin-left: 8px;
+    }
+
     @media (max-width: 768px) {
       .sidebar { display: none; }
       .main { margin-left: 0; padding: 16px; }
+      .detail-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
 
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="login-container">
+  <div class="login-card">
+    <div class="logo">troque<span>AI</span></div>
+    <h1>Entrar</h1>
+    <p class="subtitle">Acesse o painel da sua loja</p>
+    <div class="form-group">
+      <label>E-mail</label>
+      <input type="email" id="login-email" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Senha</label>
+      <input type="password" id="login-password" placeholder="Sua senha" autocomplete="current-password">
+    </div>
+    <button class="login-btn" onclick="fazerLogin()" id="login-btn">Entrar</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- MAIN APP (hidden until login) -->
+<div id="app-screen" style="display:none;">
+
 <div class="sidebar">
   <div class="logo">troque<span>AI</span></div>
+  <div class="tenant-info">
+    <strong id="tenant-nome">-</strong>
+    <span id="tenant-email">-</span>
+  </div>
   <nav>
-    <a href="#" class="active" onclick="showSection('dashboard')">Dashboard</a>
-    <a href="#" onclick="showSection('solicitacoes')">Solicitações</a>
-    <a href="#" onclick="showSection('configuracoes')">Configurações</a>
+    <a href="#" class="active" onclick="showSection('dashboard', this)">Dashboard</a>
+    <a href="#" onclick="showSection('solicitacoes', this)">Solicitacoes</a>
+    <a href="#" onclick="showSection('configuracoes', this)">Configuracoes</a>
+    <a href="#" onclick="showSection('webhooks', this)">Webhooks</a>
   </nav>
+  <button class="logout-btn" onclick="logout()">Sair</button>
 </div>
 
 <div class="main">
@@ -113,27 +251,27 @@
 
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="label">Total de Solicitações</div>
+        <div class="label">Total de Solicitacoes</div>
         <div class="value" id="stat-total">-</div>
-        <div class="sub">Últimos 30 dias</div>
+        <div class="sub">Ultimos 30 dias</div>
       </div>
       <div class="stat-card">
         <div class="label">Pendentes</div>
         <div class="value" id="stat-pendentes" style="color: #f59e0b;">-</div>
-        <div class="sub">Aguardando análise</div>
+        <div class="sub">Aguardando analise</div>
       </div>
       <div class="stat-card">
         <div class="label">Trocas</div>
         <div class="value" id="stat-trocas" style="color: #3b82f6;">-</div>
-        <div class="sub">No período</div>
+        <div class="sub">No periodo</div>
       </div>
       <div class="stat-card">
-        <div class="label">Devoluções</div>
+        <div class="label">Devolucoes</div>
         <div class="value" id="stat-devolucoes" style="color: #ec4899;">-</div>
-        <div class="sub">No período</div>
+        <div class="sub">No periodo</div>
       </div>
       <div class="stat-card">
-        <div class="label">Taxa de Resolução</div>
+        <div class="label">Taxa de Resolucao</div>
         <div class="value" id="stat-taxa" style="color: #10b981;">-</div>
         <div class="sub">Resolvidas / Total</div>
       </div>
@@ -142,7 +280,7 @@
 
   <!-- SOLICITACOES -->
   <div id="section-solicitacoes" style="display:none;">
-    <h1 style="font-size: 24px; color: #1f2937; margin-bottom: 24px;">Solicitações</h1>
+    <h1 style="font-size: 24px; color: #1f2937; margin-bottom: 24px;">Solicitacoes</h1>
 
     <div class="filters">
       <select id="filtro-status" onchange="carregarSolicitacoes()">
@@ -157,7 +295,7 @@
       <select id="filtro-tipo" onchange="carregarSolicitacoes()">
         <option value="">Todos os tipos</option>
         <option value="troca">Troca</option>
-        <option value="devolucao">Devolução</option>
+        <option value="devolucao">Devolucao</option>
       </select>
     </div>
 
@@ -171,11 +309,10 @@
             <th>Tipo</th>
             <th>Status</th>
             <th>Data</th>
-            <th>Ações</th>
           </tr>
         </thead>
         <tbody id="tabela-solicitacoes">
-          <tr><td colspan="7" class="empty-state"><div class="icon">📦</div>Nenhuma solicitação encontrada</td></tr>
+          <tr><td colspan="6" class="empty-state"><div class="icon">📦</div>Nenhuma solicitacao encontrada</td></tr>
         </tbody>
       </table>
     </div>
@@ -183,7 +320,7 @@
 
   <!-- CONFIGURACOES -->
   <div id="section-configuracoes" style="display:none;">
-    <h1 style="font-size: 24px; color: #1f2937; margin-bottom: 24px;">Configurações</h1>
+    <h1 style="font-size: 24px; color: #1f2937; margin-bottom: 24px;">Configuracoes</h1>
 
     <div class="card">
       <h2>Dados da Loja</h2>
@@ -197,35 +334,242 @@
           <input type="number" id="cfg-prazo-troca" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
         </div>
         <div>
-          <label style="font-size: 14px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Cor Primária</label>
+          <label style="font-size: 14px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Cor Primaria</label>
           <input type="color" id="cfg-cor-primaria" style="width: 80px; height: 40px; border: none; cursor: pointer;">
         </div>
         <button onclick="salvarConfiguracoes()" style="padding: 12px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
-          Salvar Configurações
+          Salvar Configuracoes
         </button>
       </div>
     </div>
   </div>
 
+  <!-- WEBHOOKS -->
+  <div id="section-webhooks" style="display:none;">
+    <h1 style="font-size: 24px; color: #1f2937; margin-bottom: 24px;">Webhooks</h1>
+
+    <div class="card">
+      <h2>Shopify</h2>
+      <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">
+        Configure este URL no painel Shopify em Settings &gt; Notifications &gt; Webhooks. Evento: <strong>Order creation</strong>
+      </p>
+      <div class="webhook-url" id="webhook-shopify">-</div>
+      <button class="copy-btn" onclick="copiarWebhook('shopify')">Copiar</button>
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+      <h2>Yampi</h2>
+      <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">
+        Configure este URL no painel Yampi em Configuracoes &gt; Webhooks. Evento: <strong>Pedido pago</strong>
+      </p>
+      <div class="webhook-url" id="webhook-yampi">-</div>
+      <button class="copy-btn" onclick="copiarWebhook('yampi')">Copiar</button>
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+      <h2>Shopify Webhook Secret (opcional)</h2>
+      <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">
+        Para verificar a autenticidade dos webhooks, cole o secret do Shopify aqui.
+      </p>
+      <div style="display: flex; gap: 8px; max-width: 500px;">
+        <input type="text" id="cfg-shopify-secret" placeholder="shpss_xxxxxxxxxxxx" style="flex:1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        <button onclick="salvarWebhookSecret()" style="padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- MODAL DETALHE -->
+<div class="modal-overlay" id="modal-detalhe">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Solicitacao <span id="modal-protocolo">-</span></h2>
+      <button class="modal-close" onclick="fecharModal()">&times;</button>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="dl">Status</div>
+        <div class="dv" id="modal-status">-</div>
+      </div>
+      <div class="detail-item">
+        <div class="dl">Tipo</div>
+        <div class="dv" id="modal-tipo">-</div>
+      </div>
+      <div class="detail-item">
+        <div class="dl">Cliente</div>
+        <div class="dv" id="modal-cliente">-</div>
+      </div>
+      <div class="detail-item">
+        <div class="dl">Email</div>
+        <div class="dv" id="modal-email">-</div>
+      </div>
+      <div class="detail-item">
+        <div class="dl">Pedido</div>
+        <div class="dv" id="modal-pedido">-</div>
+      </div>
+      <div class="detail-item">
+        <div class="dl">Data</div>
+        <div class="dv" id="modal-data">-</div>
+      </div>
+      <div class="detail-item detail-full">
+        <div class="dl">Motivo</div>
+        <div class="dv" id="modal-motivo">-</div>
+      </div>
+      <div class="detail-item detail-full" id="modal-obs-wrap" style="display:none;">
+        <div class="dl">Observacao</div>
+        <div class="dv" id="modal-obs">-</div>
+      </div>
+    </div>
+
+    <div>
+      <h3 style="font-size: 15px; color: #374151; margin-bottom: 12px;">Itens</h3>
+      <div class="item-list" id="modal-itens"></div>
+    </div>
+
+    <!-- Cupom/Postagem info -->
+    <div id="modal-info-extra" style="display:none; margin-bottom: 16px;">
+      <div class="detail-grid">
+        <div class="detail-item" id="modal-postagem-wrap" style="display:none;">
+          <div class="dl">Codigo de Postagem</div>
+          <div class="dv" id="modal-postagem">-</div>
+        </div>
+        <div class="detail-item" id="modal-cupom-wrap" style="display:none;">
+          <div class="dl">Cupom</div>
+          <div class="dv" id="modal-cupom">-</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACOES -->
+    <div class="action-section" id="action-section">
+      <h3>Acoes</h3>
+      <div class="action-buttons" id="action-buttons"></div>
+
+      <!-- Form Aprovar -->
+      <div class="action-form" id="form-aprovar">
+        <label>Codigo de Postagem (opcional)</label>
+        <input type="text" id="input-postagem" placeholder="Ex: BR123456789XX">
+        <label>Nota interna (opcional)</label>
+        <textarea id="input-nota-aprovar" rows="2" placeholder="Nota interna..."></textarea>
+        <button class="submit-action" onclick="executarAcao('aprovada')">Confirmar Aprovacao</button>
+      </div>
+
+      <!-- Form Rejeitar -->
+      <div class="action-form" id="form-rejeitar">
+        <label>Motivo da rejeicao</label>
+        <textarea id="input-nota-rejeitar" rows="2" placeholder="Motivo da rejeicao..."></textarea>
+        <button class="submit-action" style="background: #ef4444;" onclick="executarAcao('rejeitada')">Confirmar Rejeicao</button>
+      </div>
+
+      <!-- Form Cupom -->
+      <div class="action-form" id="form-cupom">
+        <label>Codigo do Cupom</label>
+        <input type="text" id="input-cupom-codigo" placeholder="Ex: TROCA-MARIA-50">
+        <label>Valor (R$)</label>
+        <input type="number" id="input-cupom-valor" placeholder="49.90" step="0.01">
+        <button class="submit-action" style="background: #f59e0b;" onclick="executarAcao('resolvida')">Gerar Cupom e Resolver</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-  // TODO: implementar autenticacao e tenant_id dinamico
-  const TENANT_ID = 'demo';
+  // ==================== AUTH ====================
+  let AUTH_TOKEN = localStorage.getItem('troqueai_token');
+  let TENANT = JSON.parse(localStorage.getItem('troqueai_tenant') || 'null');
+  let currentSolicitacao = null;
 
-  function showSection(name) {
+  function headers() {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${AUTH_TOKEN}`,
+      'X-Tenant-Id': TENANT?.id || ''
+    };
+  }
+
+  function checkAuth() {
+    if (AUTH_TOKEN && TENANT) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app-screen').style.display = 'block';
+      document.getElementById('tenant-nome').textContent = TENANT.nome;
+      document.getElementById('tenant-email').textContent = TENANT.email;
+      setupWebhookUrls();
+      carregarDashboard();
+    }
+  }
+
+  async function fazerLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errorEl = document.getElementById('login-error');
+    const btn = document.getElementById('login-btn');
+    errorEl.style.display = 'none';
+
+    if (!email || !password) {
+      errorEl.textContent = 'Preencha todos os campos.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Entrando...';
+
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'login', email, password })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao fazer login');
+
+      AUTH_TOKEN = data.token;
+      TENANT = data.tenant;
+      localStorage.setItem('troqueai_token', AUTH_TOKEN);
+      localStorage.setItem('troqueai_tenant', JSON.stringify(TENANT));
+      checkAuth();
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    }
+  }
+
+  function logout() {
+    localStorage.removeItem('troqueai_token');
+    localStorage.removeItem('troqueai_tenant');
+    AUTH_TOKEN = null;
+    TENANT = null;
+    document.getElementById('app-screen').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+
+  // Enter to login
+  document.getElementById('login-password').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') fazerLogin();
+  });
+
+  // ==================== NAVIGATION ====================
+  function showSection(name, el) {
     document.querySelectorAll('[id^="section-"]').forEach(s => s.style.display = 'none');
     document.getElementById(`section-${name}`).style.display = 'block';
-    document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
-    event.target.classList.add('active');
+    document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
+    if (el) el.classList.add('active');
 
     if (name === 'dashboard') carregarDashboard();
     if (name === 'solicitacoes') carregarSolicitacoes();
   }
 
+  // ==================== DASHBOARD ====================
   async function carregarDashboard() {
     try {
-      const res = await fetch(`/api/dashboard?tenant_id=${TENANT_ID}&periodo=30d`);
+      const res = await fetch(`/api/dashboard?tenant_id=${TENANT.id}&periodo=30d`, { headers: headers() });
       const data = await res.json();
       document.getElementById('stat-total').textContent = data.total || 0;
       document.getElementById('stat-pendentes').textContent = data.pendentes || 0;
@@ -237,34 +581,32 @@
     }
   }
 
+  // ==================== SOLICITACOES ====================
   async function carregarSolicitacoes() {
     try {
       const status = document.getElementById('filtro-status').value;
       const tipo = document.getElementById('filtro-tipo').value;
-      let url = `/api/solicitacoes?tenant_id=${TENANT_ID}`;
+      let url = `/api/solicitacoes?tenant_id=${TENANT.id}`;
       if (status) url += `&status=${status}`;
       if (tipo) url += `&tipo=${tipo}`;
 
-      const res = await fetch(url, { headers: { 'X-Tenant-Id': TENANT_ID } });
+      const res = await fetch(url, { headers: headers() });
       const data = await res.json();
 
       const tbody = document.getElementById('tabela-solicitacoes');
       if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">📦</div>Nenhuma solicitação</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="icon">📦</div>Nenhuma solicitacao</td></tr>';
         return;
       }
 
       tbody.innerHTML = data.map(s => `
-        <tr>
+        <tr onclick="abrirDetalhe('${s.id}')">
           <td><strong>${s.protocolo}</strong></td>
           <td>#${s.order_number}</td>
           <td>${s.customer_name || '-'}</td>
           <td><span class="badge badge-${s.tipo}">${s.tipo}</span></td>
           <td><span class="badge badge-${s.status}">${s.status}</span></td>
           <td>${new Date(s.created_at).toLocaleDateString('pt-BR')}</td>
-          <td class="actions">
-            <button onclick="abrirDetalhe('${s.id}')">Ver</button>
-          </td>
         </tr>
       `).join('');
     } catch (err) {
@@ -272,11 +614,195 @@
     }
   }
 
-  function abrirDetalhe(id) {
-    // TODO: modal de detalhe com ações (aprovar, rejeitar, gerar cupom)
-    alert('Detalhe da solicitação: ' + id);
+  // ==================== MODAL DETALHE ====================
+  async function abrirDetalhe(id) {
+    try {
+      const res = await fetch(`/api/solicitacoes?tenant_id=${TENANT.id}&id=${id}`, { headers: headers() });
+      const s = await res.json();
+      currentSolicitacao = s;
+
+      document.getElementById('modal-protocolo').textContent = s.protocolo;
+      document.getElementById('modal-status').innerHTML = `<span class="badge badge-${s.status}">${s.status}</span>`;
+      document.getElementById('modal-tipo').innerHTML = `<span class="badge badge-${s.tipo}">${s.tipo}</span>`;
+      document.getElementById('modal-cliente').textContent = s.customer_name || '-';
+      document.getElementById('modal-email').textContent = s.customer_email || '-';
+      document.getElementById('modal-pedido').textContent = `#${s.order_number}`;
+      document.getElementById('modal-data').textContent = new Date(s.created_at).toLocaleString('pt-BR');
+      document.getElementById('modal-motivo').textContent = s.motivo || '-';
+
+      if (s.observacao) {
+        document.getElementById('modal-obs').textContent = s.observacao;
+        document.getElementById('modal-obs-wrap').style.display = 'block';
+      } else {
+        document.getElementById('modal-obs-wrap').style.display = 'none';
+      }
+
+      // Itens
+      const itens = typeof s.itens === 'string' ? JSON.parse(s.itens) : (s.itens || []);
+      document.getElementById('modal-itens').innerHTML = itens.map(item => `
+        <div class="item-row">
+          <span>${item.name || item.nome || 'Produto'} (x${item.quantity || item.qtd || 1})</span>
+          <span>R$ ${item.price || item.preco || '0,00'}</span>
+        </div>
+      `).join('') || '<p style="color:#9ca3af;">Nenhum item</p>';
+
+      // Info extra (postagem, cupom)
+      const temExtra = s.codigo_postagem || s.cupom_codigo;
+      document.getElementById('modal-info-extra').style.display = temExtra ? 'block' : 'none';
+      if (s.codigo_postagem) {
+        document.getElementById('modal-postagem').textContent = s.codigo_postagem;
+        document.getElementById('modal-postagem-wrap').style.display = 'block';
+      } else {
+        document.getElementById('modal-postagem-wrap').style.display = 'none';
+      }
+      if (s.cupom_codigo) {
+        document.getElementById('modal-cupom').textContent = `${s.cupom_codigo} (R$ ${s.cupom_valor || '0'})`;
+        document.getElementById('modal-cupom-wrap').style.display = 'block';
+      } else {
+        document.getElementById('modal-cupom-wrap').style.display = 'none';
+      }
+
+      // Botoes de acao baseados no status atual
+      renderActionButtons(s.status);
+
+      document.getElementById('modal-detalhe').classList.add('active');
+    } catch (err) {
+      console.error('Erro detalhe:', err);
+      alert('Erro ao carregar detalhe');
+    }
   }
 
+  function renderActionButtons(status) {
+    const btns = document.getElementById('action-buttons');
+    const section = document.getElementById('action-section');
+
+    // Esconder todos os forms
+    document.querySelectorAll('.action-form').forEach(f => f.classList.remove('active'));
+
+    const acoesPorStatus = {
+      'pendente': [
+        { label: 'Aprovar', class: 'btn-aprovar', form: 'form-aprovar' },
+        { label: 'Rejeitar', class: 'btn-rejeitar', form: 'form-rejeitar' }
+      ],
+      'aprovada': [
+        { label: 'Marcar como Postado', class: 'btn-postado', action: 'postado' },
+        { label: 'Gerar Cupom', class: 'btn-cupom', form: 'form-cupom' }
+      ],
+      'postado': [
+        { label: 'Marcar como Recebido', class: 'btn-recebido', action: 'recebido' }
+      ],
+      'recebido': [
+        { label: 'Gerar Cupom e Resolver', class: 'btn-cupom', form: 'form-cupom' },
+        { label: 'Marcar como Resolvida', class: 'btn-resolvida', action: 'resolvida' }
+      ]
+    };
+
+    const acoes = acoesPorStatus[status] || [];
+    if (acoes.length === 0) {
+      section.style.display = 'none';
+      return;
+    }
+
+    section.style.display = 'block';
+    btns.innerHTML = acoes.map((a, i) => {
+      if (a.form) {
+        return `<button class="action-btn ${a.class}" onclick="mostrarForm('${a.form}')">${a.label}</button>`;
+      }
+      return `<button class="action-btn ${a.class}" onclick="executarAcaoRapida('${a.action}')">${a.label}</button>`;
+    }).join('');
+  }
+
+  function mostrarForm(formId) {
+    document.querySelectorAll('.action-form').forEach(f => f.classList.remove('active'));
+    document.getElementById(formId).classList.add('active');
+  }
+
+  async function executarAcaoRapida(novoStatus) {
+    if (!currentSolicitacao) return;
+    try {
+      const res = await fetch('/api/solicitacoes', {
+        method: 'PATCH',
+        headers: headers(),
+        body: JSON.stringify({
+          id: currentSolicitacao.id,
+          status: novoStatus
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro');
+      }
+
+      alert(`Status atualizado para: ${novoStatus}`);
+      fecharModal();
+      carregarSolicitacoes();
+    } catch (err) {
+      alert('Erro: ' + err.message);
+    }
+  }
+
+  async function executarAcao(novoStatus) {
+    if (!currentSolicitacao) return;
+
+    const body = { id: currentSolicitacao.id, status: novoStatus };
+
+    if (novoStatus === 'aprovada') {
+      body.codigo_postagem = document.getElementById('input-postagem').value || undefined;
+      body.nota_interna = document.getElementById('input-nota-aprovar').value || undefined;
+    } else if (novoStatus === 'rejeitada') {
+      body.nota_interna = document.getElementById('input-nota-rejeitar').value || undefined;
+    } else if (novoStatus === 'resolvida') {
+      const cupomCodigo = document.getElementById('input-cupom-codigo').value;
+      const cupomValor = document.getElementById('input-cupom-valor').value;
+      if (!cupomCodigo || !cupomValor) {
+        alert('Preencha o codigo e valor do cupom.');
+        return;
+      }
+      body.cupom_codigo = cupomCodigo;
+      body.cupom_valor = cupomValor;
+    }
+
+    try {
+      const res = await fetch('/api/solicitacoes', {
+        method: 'PATCH',
+        headers: headers(),
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Erro');
+      }
+
+      const statusLabels = {
+        'aprovada': 'Solicitacao aprovada!',
+        'rejeitada': 'Solicitacao rejeitada.',
+        'resolvida': 'Solicitacao resolvida com cupom!'
+      };
+      alert(statusLabels[novoStatus] || `Status: ${novoStatus}`);
+      fecharModal();
+      carregarSolicitacoes();
+      carregarDashboard();
+    } catch (err) {
+      alert('Erro: ' + err.message);
+    }
+  }
+
+  function fecharModal() {
+    document.getElementById('modal-detalhe').classList.remove('active');
+    currentSolicitacao = null;
+    // Reset forms
+    document.querySelectorAll('.action-form').forEach(f => f.classList.remove('active'));
+    document.querySelectorAll('.action-form input, .action-form textarea').forEach(el => el.value = '');
+  }
+
+  // Fechar modal clicando fora
+  document.getElementById('modal-detalhe').addEventListener('click', function(e) {
+    if (e.target === this) fecharModal();
+  });
+
+  // ==================== CONFIGURACOES ====================
   async function salvarConfiguracoes() {
     try {
       const configs = {
@@ -285,20 +811,50 @@
         cor_primaria: document.getElementById('cfg-cor-primaria').value
       };
 
-      await fetch(`/api/tenants?tenant_id=${TENANT_ID}`, {
+      await fetch(`/api/tenants?tenant_id=${TENANT.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': TENANT_ID },
+        headers: headers(),
         body: JSON.stringify({ configs })
       });
 
-      alert('Configurações salvas!');
+      alert('Configuracoes salvas!');
     } catch (err) {
       alert('Erro ao salvar: ' + err.message);
     }
   }
 
-  // Init
-  carregarDashboard();
+  // ==================== WEBHOOKS ====================
+  function setupWebhookUrls() {
+    const baseUrl = window.location.origin;
+    document.getElementById('webhook-shopify').textContent = `${baseUrl}/api/webhooks?platform=shopify&tenant_id=${TENANT.id}`;
+    document.getElementById('webhook-yampi').textContent = `${baseUrl}/api/webhooks?platform=yampi&tenant_id=${TENANT.id}`;
+  }
+
+  function copiarWebhook(platform) {
+    const el = document.getElementById(`webhook-${platform}`);
+    navigator.clipboard.writeText(el.textContent).then(() => {
+      alert('URL copiada!');
+    });
+  }
+
+  async function salvarWebhookSecret() {
+    const secret = document.getElementById('cfg-shopify-secret').value.trim();
+    if (!secret) return alert('Digite o secret.');
+
+    try {
+      await fetch(`/api/tenants?tenant_id=${TENANT.id}`, {
+        method: 'PUT',
+        headers: headers(),
+        body: JSON.stringify({ configs: { shopify_webhook_secret: secret } })
+      });
+      alert('Webhook secret salvo!');
+    } catch (err) {
+      alert('Erro: ' + err.message);
+    }
+  }
+
+  // ==================== INIT ====================
+  checkAuth();
 </script>
 
 </body>

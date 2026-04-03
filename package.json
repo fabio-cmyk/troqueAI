@@ -5,14 +5,17 @@
   "private": true,
   "scripts": {
     "dev": "node server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "seed": "node scripts/seed.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
     "axios": "^1.7.9",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "resend": "^4.1.2",
-    "dotenv": "^16.4.7"
+    "jsonwebtoken": "^9.0.3",
+    "resend": "^4.1.2"
   },
   "engines": {
     "node": ">=18.0.0"
