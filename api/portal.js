@@ -1,4 +1,4 @@
-const { buscarPedidoCliente, buscarSolicitacoesCliente, buscarTenantPorSlug, buscarConfiguracoes } = require('../lib/supabase');
+const { supabase, buscarPedidoCliente, buscarSolicitacoesCliente, buscarTenantPorSlug, buscarConfiguracoes } = require('../lib/supabase');
 
 // GET /api/portal?slug=minha-loja&identificador=cpf-ou-email&pedido=12345
 // Endpoint publico para o portal do cliente
@@ -53,7 +53,31 @@ module.exports = async function handler(req, res) {
       return res.json(solicitacoes);
     }
 
-    // Buscar pedido do cliente
+    // Buscar TODOS os pedidos do cliente (por CPF ou email)
+    if (action === 'pedidos') {
+      if (!idLimpo) return res.status(400).json({ error: 'identificador obrigatorio' });
+
+      const coluna = idLimpo.includes('@') ? 'customer_email' : 'customer_cpf';
+      const { data: pedidos, error: errPedidos } = await supabase
+        .from('pedidos')
+        .select('order_number, customer_name, customer_email, customer_cpf, items, total_value, status, created_at')
+        .eq('tenant_id', tenant.id)
+        .eq(coluna, idLimpo)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (errPedidos) throw errPedidos;
+
+      // Parse items JSON
+      const pedidosFormatados = (pedidos || []).map(p => ({
+        ...p,
+        items: typeof p.items === 'string' ? JSON.parse(p.items) : p.items
+      }));
+
+      return res.json(pedidosFormatados);
+    }
+
+    // Buscar pedido especifico do cliente
     if (!idLimpo || !pedido) {
       return res.status(400).json({ error: 'identificador e pedido obrigatorios' });
     }

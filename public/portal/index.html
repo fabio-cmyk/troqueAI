@@ -171,24 +171,30 @@
 
 <div class="container">
 
-  <!-- STEP 1: Buscar Pedido -->
+  <!-- STEP 1: Identificacao -->
   <div class="card step active" id="step-busca">
-    <h2 style="font-size: 18px; margin-bottom: 20px; color: #1f2937;">Buscar Pedido</h2>
+    <h2 style="font-size: 18px; margin-bottom: 20px; color: #1f2937;">Encontre seus pedidos</h2>
     <div id="busca-error" class="alert alert-error" style="display:none;"></div>
     <div class="form-group">
-      <label>CPF ou E-mail</label>
-      <input type="text" id="identificador" placeholder="Digite seu CPF ou e-mail">
+      <label>E-mail ou CPF</label>
+      <input type="text" id="identificador" placeholder="Digite seu e-mail ou CPF">
     </div>
-    <div class="form-group">
-      <label>Número do Pedido</label>
-      <input type="text" id="numero-pedido" placeholder="Ex: 12345">
-    </div>
-    <button class="btn" onclick="buscarPedido()">Buscar Pedido</button>
+    <button class="btn" onclick="buscarPedidos()">Buscar meus pedidos</button>
 
     <div style="text-align: center; margin-top: 20px;">
       <a href="#" onclick="mostrarSolicitacoes()" style="color: var(--cor-primaria, #6366f1); font-size: 14px;">
-        Já tenho uma solicitação - ver status
+        Acompanhar solicitacao existente
       </a>
+    </div>
+  </div>
+
+  <!-- STEP 1b: Lista de pedidos -->
+  <div class="step" id="step-pedidos">
+    <div class="card">
+      <h2 style="font-size: 18px; margin-bottom: 6px; color: #1f2937;">Seus Pedidos</h2>
+      <p style="font-size: 13px; color: #6b7280; margin-bottom: 20px;">Selecione o pedido para solicitar troca ou devolucao</p>
+      <div id="pedidos-lista"></div>
+      <button class="btn" style="background: #e5e7eb; color: #374151; margin-top: 16px;" onclick="voltarBusca()">Voltar</button>
     </div>
   </div>
 
@@ -281,14 +287,13 @@
     document.getElementById(stepId).classList.add('active');
   }
 
-  async function buscarPedido() {
+  async function buscarPedidos() {
     const identificador = document.getElementById('identificador').value.trim();
-    const pedido = document.getElementById('numero-pedido').value.trim();
     const errorEl = document.getElementById('busca-error');
     errorEl.style.display = 'none';
 
-    if (!identificador || !pedido) {
-      errorEl.textContent = 'Preencha todos os campos.';
+    if (!identificador) {
+      errorEl.textContent = 'Digite seu e-mail ou CPF.';
       errorEl.style.display = 'block';
       return;
     }
@@ -296,37 +301,63 @@
     mostrarStep('step-loading');
 
     try {
-      const res = await fetch(`/api/portal?slug=${slug}&identificador=${encodeURIComponent(identificador)}&pedido=${encodeURIComponent(pedido)}&action=pedido`);
+      const res = await fetch(`/api/portal?slug=${slug}&identificador=${encodeURIComponent(identificador)}&action=pedidos`);
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || 'Pedido não encontrado');
+        throw new Error(err.error || 'Erro ao buscar pedidos');
       }
 
-      pedidoData = await res.json();
-      document.getElementById('pedido-num').textContent = pedidoData.order_number;
+      const pedidos = await res.json();
 
-      // Renderizar itens
-      const itensContainer = document.getElementById('itens-lista');
-      const items = pedidoData.items || [];
-      itensContainer.innerHTML = items.map((item, i) => `
-        <div class="item-card" onclick="toggleItem(this, ${i})" data-index="${i}">
-          <h4>${item.name || item.nome || 'Produto'}</h4>
-          <p>Qtd: ${item.quantity || item.qtd || 1} | R$ ${item.price || item.preco || '0,00'}</p>
-        </div>
-      `).join('');
+      if (!pedidos.length) {
+        errorEl.textContent = 'Nenhum pedido encontrado para esse e-mail/CPF.';
+        errorEl.style.display = 'block';
+        mostrarStep('step-busca');
+        return;
+      }
 
-      // Preencher motivos
-      const motivoSelect = document.getElementById('motivo-select');
-      const motivos = tenantConfig.motivos_troca || ['Tamanho errado', 'Defeito', 'Outro'];
-      motivoSelect.innerHTML = motivos.map(m => `<option value="${m}">${m}</option>`).join('');
+      // Renderizar lista de pedidos
+      const container = document.getElementById('pedidos-lista');
+      container.innerHTML = pedidos.map(p => {
+        const items = p.items || [];
+        const itemNames = items.slice(0, 3).map(i => i.name || i.nome || 'Produto').join(', ');
+        const moreItems = items.length > 3 ? ` +${items.length - 3}` : '';
+        return `<div class="item-card" onclick='selecionarPedido(${JSON.stringify(p).replace(/'/g, "&#39;")})' style="cursor:pointer;">
+          <h4>Pedido #${p.order_number}</h4>
+          <p>${itemNames}${moreItems}</p>
+          <p style="margin-top: 4px;">R$ ${(p.total_value || 0).toFixed(2)} | ${p.created_at ? new Date(p.created_at).toLocaleDateString('pt-BR') : ''}</p>
+        </div>`;
+      }).join('');
 
-      itensSelecionados = [];
-      mostrarStep('step-itens');
+      mostrarStep('step-pedidos');
     } catch (err) {
       errorEl.textContent = err.message;
       errorEl.style.display = 'block';
       mostrarStep('step-busca');
     }
+  }
+
+  function selecionarPedido(p) {
+    pedidoData = p;
+    document.getElementById('pedido-num').textContent = p.order_number;
+
+    // Renderizar itens
+    const itensContainer = document.getElementById('itens-lista');
+    const items = p.items || [];
+    itensContainer.innerHTML = items.map((item, i) => `
+      <div class="item-card" onclick="toggleItem(this, ${i})" data-index="${i}">
+        <h4>${item.name || item.nome || 'Produto'}</h4>
+        <p>Qtd: ${item.quantity || item.qtd || 1} | R$ ${item.price || item.preco || '0,00'}</p>
+      </div>
+    `).join('');
+
+    // Preencher motivos
+    const motivoSelect = document.getElementById('motivo-select');
+    const motivos = tenantConfig.motivos_troca || ['Tamanho errado', 'Defeito', 'Outro'];
+    motivoSelect.innerHTML = motivos.map(m => `<option value="${m}">${m}</option>`).join('');
+
+    itensSelecionados = [];
+    mostrarStep('step-itens');
   }
 
   function toggleItem(el, index) {
@@ -360,6 +391,7 @@
           itens: itensSel,
           customer_name: pedidoData.customer_name,
           customer_email: pedidoData.customer_email,
+          customer_cpf: pedidoData.customer_cpf || '',
           observacao: document.getElementById('observacao').value
         })
       });
@@ -451,7 +483,6 @@
   function voltarBusca() { mostrarStep('step-busca'); }
   function voltarInicio() {
     document.getElementById('identificador').value = '';
-    document.getElementById('numero-pedido').value = '';
     mostrarStep('step-busca');
   }
 
