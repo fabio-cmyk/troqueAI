@@ -523,6 +523,56 @@
       </div>
     </div>
 
+    <!-- Correios -->
+    <div class="card" style="margin-top: 16px;">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+        <div style="width: 40px; height: 40px; background: #ffc72c; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #003087; font-weight: 700; font-size: 16px;">&#9993;</div>
+        <div>
+          <h2 style="margin: 0;">Correios — Logística Reversa</h2>
+          <p style="font-size: 13px; color: #6b7280; margin: 0;">Gerar códigos de postagem reversa automaticamente</p>
+        </div>
+      </div>
+      <div id="correios-status" style="display:none; margin-bottom: 16px; padding: 12px; background: #d1fae5; border-radius: 8px;">
+        <span style="color: #065f46; font-size: 14px; font-weight: 600;">Correios configurado</span>
+      </div>
+      <div style="display: grid; gap: 12px; max-width: 500px;">
+        <div>
+          <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Usuário do Portal Meu Correios</label>
+          <input type="text" id="cfg-correios-usuario" placeholder="seu_usuario" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        </div>
+        <div>
+          <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Token de API</label>
+          <input type="password" id="cfg-correios-token" placeholder="Token da API Correios" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Cartão de Postagem</label>
+            <input type="text" id="cfg-correios-cartao" placeholder="0076543210" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+          </div>
+          <div>
+            <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Código Administrativo</label>
+            <input type="text" id="cfg-correios-cod-admin" placeholder="21049246" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Código SEDEX Reverso</label>
+            <input type="text" id="cfg-correios-sedex" placeholder="03247" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+          </div>
+          <div>
+            <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Código PAC Reverso</label>
+            <input type="text" id="cfg-correios-pac" placeholder="03301" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+          </div>
+        </div>
+        <div>
+          <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Prazo de Postagem (dias)</label>
+          <input type="number" id="cfg-correios-prazo" value="14" style="width: 120px; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        </div>
+        <button id="btn-salvar-correios" onclick="salvarCorreiosConfig()" style="padding: 12px 24px; background: #ffc72c; color: #003087; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer;">Salvar Configuração Correios</button>
+        <div id="correios-result" style="display:none; padding: 12px; border-radius: 8px; font-size: 14px;"></div>
+      </div>
+    </div>
+
     <!-- Widget -->
     <div class="card" style="margin-top: 16px;">
       <h2>Widget para sua loja</h2>
@@ -1085,6 +1135,7 @@
     document.getElementById('widget-code').textContent = `<script src="${baseUrl}/widget.js" data-tenant="${TENANT.slug}"><\/script>`;
     document.getElementById('portal-link').textContent = `${baseUrl}/portal/${TENANT.slug}`;
     carregarStatusIntegracao();
+    carregarCorreiosConfig();
   }
 
   function copiarWidget() {
@@ -1178,6 +1229,77 @@
       btn.disabled = false;
       btn.textContent = 'Conectar Yampi';
     }
+  }
+
+  // ==================== CORREIOS CONFIG ====================
+  async function salvarCorreiosConfig() {
+    const configs = {};
+    const fields = {
+      'cfg-correios-usuario': 'correios_usuario',
+      'cfg-correios-token': 'correios_token',
+      'cfg-correios-cartao': 'correios_cartao_postagem',
+      'cfg-correios-cod-admin': 'correios_cod_administrativo',
+      'cfg-correios-sedex': 'correios_codigo_sedex',
+      'cfg-correios-pac': 'correios_codigo_pac',
+      'cfg-correios-prazo': 'correios_prazo_postagem'
+    };
+
+    for (const [elId, key] of Object.entries(fields)) {
+      const val = document.getElementById(elId).value.trim();
+      if (val) configs[key] = val;
+    }
+
+    if (!configs.correios_usuario || !configs.correios_token || !configs.correios_cartao_postagem) {
+      alert('Preencha pelo menos Usuário, Token e Cartão de Postagem.');
+      return;
+    }
+
+    const btn = document.getElementById('btn-salvar-correios');
+    const resultEl = document.getElementById('correios-result');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    resultEl.style.display = 'none';
+
+    try {
+      await fetch(`/api/tenants?tenant_id=${TENANT.id}`, {
+        method: 'PUT',
+        headers: headers(),
+        body: JSON.stringify({ configs })
+      });
+
+      resultEl.style.display = 'block';
+      resultEl.style.background = '#d1fae5';
+      resultEl.style.color = '#065f46';
+      resultEl.textContent = 'Correios configurado! Códigos de postagem reversa serão gerados automaticamente ao aprovar solicitações.';
+      document.getElementById('correios-status').style.display = 'block';
+    } catch (err) {
+      resultEl.style.display = 'block';
+      resultEl.style.background = '#fee2e2';
+      resultEl.style.color = '#991b1b';
+      resultEl.textContent = 'Erro: ' + err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar Configuração Correios';
+    }
+  }
+
+  async function carregarCorreiosConfig() {
+    try {
+      const res = await fetch(`/api/tenants?id=${TENANT.id}`, { headers: headers() });
+      const data = await res.json();
+      const c = data.config || {};
+
+      if (c.correios_usuario) document.getElementById('cfg-correios-usuario').value = c.correios_usuario;
+      if (c.correios_cartao_postagem) document.getElementById('cfg-correios-cartao').value = c.correios_cartao_postagem;
+      if (c.correios_cod_administrativo) document.getElementById('cfg-correios-cod-admin').value = c.correios_cod_administrativo;
+      if (c.correios_codigo_sedex) document.getElementById('cfg-correios-sedex').value = c.correios_codigo_sedex;
+      if (c.correios_codigo_pac) document.getElementById('cfg-correios-pac').value = c.correios_codigo_pac;
+      if (c.correios_prazo_postagem) document.getElementById('cfg-correios-prazo').value = c.correios_prazo_postagem;
+
+      if (c.correios_usuario && c.correios_cartao_postagem) {
+        document.getElementById('correios-status').style.display = 'block';
+      }
+    } catch {}
   }
 
   async function iniciarImportacao(shopName) {

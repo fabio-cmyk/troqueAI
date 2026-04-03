@@ -139,7 +139,8 @@ module.exports = async function handler(req, res) {
           const solicitacaoAtual = await buscarSolicitacaoPorId(id, tenantId);
           const resultado = await gerarPostagemReversa(config, {
             customer_name: solicitacaoAtual.customer_name,
-            customer_email: solicitacaoAtual.customer_email
+            customer_email: solicitacaoAtual.customer_email,
+            protocolo: solicitacaoAtual.protocolo
           });
           if (resultado.sucesso) {
             atualizacao.codigo_postagem = resultado.codigo_postagem;
