@@ -222,6 +222,49 @@
     </div>
     <button class="login-btn" onclick="fazerLogin()" id="login-btn">Entrar</button>
     <div class="login-error" id="login-error"></div>
+    <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #6b7280;">
+      Ainda nao tem conta? <a href="#" onclick="mostrarSignup()" style="color: #6366f1; font-weight: 600; text-decoration: none;">Criar loja gratis</a>
+    </p>
+  </div>
+</div>
+
+<!-- SIGNUP SCREEN -->
+<div id="signup-screen" class="login-container" style="display:none;">
+  <div class="login-card" style="max-width: 460px;">
+    <div class="logo">troque<span>AI</span></div>
+    <h1>Criar Loja</h1>
+    <p class="subtitle">Configure sua loja em 1 minuto</p>
+    <div class="form-group">
+      <label>Nome da Loja</label>
+      <input type="text" id="signup-nome" placeholder="Ex: Moda Fashion" autocomplete="organization">
+    </div>
+    <div class="form-group">
+      <label>Slug (URL do portal)</label>
+      <input type="text" id="signup-slug" placeholder="Ex: moda-fashion" autocomplete="off" style="font-family: monospace;">
+      <small style="color: #9ca3af; font-size: 12px;">troqueai.vercel.app/portal/<strong id="slug-preview">sua-loja</strong></small>
+    </div>
+    <div class="form-group">
+      <label>E-mail</label>
+      <input type="email" id="signup-email" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Senha</label>
+      <input type="password" id="signup-password" placeholder="Minimo 6 caracteres" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+      <label>Plataforma (opcional)</label>
+      <select id="signup-plataforma" style="width:100%; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 15px; font-family: inherit;">
+        <option value="shopify">Shopify</option>
+        <option value="yampi">Yampi</option>
+        <option value="nuvemshop">Nuvemshop</option>
+        <option value="outro">Outro</option>
+      </select>
+    </div>
+    <button class="login-btn" onclick="fazerSignup()" id="signup-btn" style="background: #10b981;">Criar Loja</button>
+    <div class="login-error" id="signup-error"></div>
+    <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #6b7280;">
+      Ja tem conta? <a href="#" onclick="mostrarLogin()" style="color: #6366f1; font-weight: 600; text-decoration: none;">Entrar</a>
+    </p>
   </div>
 </div>
 
@@ -390,6 +433,28 @@
           <input type="text" id="cfg-shopify-secret" placeholder="shpss_xxxxxxxxxxxx" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
         </div>
         <button onclick="salvarShopifyConfig()" style="padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Salvar Configuracao Shopify</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 16px;">
+      <h2>Yampi — Configuracao</h2>
+      <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">
+        Para criar cupons reais na Yampi ao resolver solicitacoes.
+      </p>
+      <div style="display: grid; gap: 12px; max-width: 500px;">
+        <div>
+          <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Alias da loja (slug Yampi)</label>
+          <input type="text" id="cfg-yampi-alias" placeholder="minha-loja" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        </div>
+        <div>
+          <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">User Token</label>
+          <input type="password" id="cfg-yampi-token" placeholder="Token do usuario Yampi" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        </div>
+        <div>
+          <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Secret Key</label>
+          <input type="password" id="cfg-yampi-secret" placeholder="Secret key do usuario Yampi" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        </div>
+        <button onclick="salvarYampiConfig()" style="padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Salvar Configuracao Yampi</button>
       </div>
     </div>
   </div>
@@ -887,6 +952,124 @@
       alert('Erro: ' + err.message);
     }
   }
+
+  // ==================== YAMPI CONFIG ====================
+  async function salvarYampiConfig() {
+    const configs = {};
+    const alias = document.getElementById('cfg-yampi-alias').value.trim();
+    const token = document.getElementById('cfg-yampi-token').value.trim();
+    const secret = document.getElementById('cfg-yampi-secret').value.trim();
+
+    if (alias) configs.yampi_alias = alias;
+    if (token) configs.yampi_token = token;
+    if (secret) configs.yampi_secret_key = secret;
+
+    if (Object.keys(configs).length === 0) return alert('Preencha pelo menos um campo.');
+
+    try {
+      await fetch(`/api/tenants?tenant_id=${TENANT.id}`, {
+        method: 'PUT',
+        headers: headers(),
+        body: JSON.stringify({ configs })
+      });
+      alert('Configuracao Yampi salva!');
+    } catch (err) {
+      alert('Erro: ' + err.message);
+    }
+  }
+
+  // ==================== SIGNUP / ONBOARDING ====================
+  function mostrarSignup() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('signup-screen').style.display = 'flex';
+  }
+
+  function mostrarLogin() {
+    document.getElementById('signup-screen').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+
+  // Auto-gerar slug a partir do nome
+  document.getElementById('signup-nome').addEventListener('input', function() {
+    const slug = this.value.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    document.getElementById('signup-slug').value = slug;
+    document.getElementById('slug-preview').textContent = slug || 'sua-loja';
+  });
+
+  document.getElementById('signup-slug').addEventListener('input', function() {
+    document.getElementById('slug-preview').textContent = this.value || 'sua-loja';
+  });
+
+  async function fazerSignup() {
+    const nome = document.getElementById('signup-nome').value.trim();
+    const slug = document.getElementById('signup-slug').value.trim();
+    const email = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value;
+    const plataforma = document.getElementById('signup-plataforma').value;
+    const errorEl = document.getElementById('signup-error');
+    const btn = document.getElementById('signup-btn');
+
+    errorEl.style.display = 'none';
+
+    if (!nome || !slug || !email || !password) {
+      errorEl.textContent = 'Preencha todos os campos.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    if (password.length < 6) {
+      errorEl.textContent = 'Senha deve ter no minimo 6 caracteres.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+      errorEl.textContent = 'Slug deve conter apenas letras minusculas, numeros e hifens.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Criando...';
+
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'signup', nome, slug, email, password, plataforma })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao criar loja');
+
+      // Auto-login
+      localStorage.setItem('troqueai_token', data.token);
+      localStorage.setItem('troqueai_tenant', JSON.stringify(data.tenant));
+      AUTH_TOKEN = data.token;
+      TENANT = data.tenant;
+
+      document.getElementById('signup-screen').style.display = 'none';
+      document.getElementById('app-screen').style.display = 'block';
+      document.getElementById('tenant-nome').textContent = TENANT.nome;
+      document.getElementById('tenant-email').textContent = TENANT.email;
+      setupWebhookUrls();
+      carregarDashboard();
+
+      alert('Loja criada com sucesso! Configure suas integracoes em Configuracoes > Webhooks.');
+    } catch (err) {
+      errorEl.textContent = err.message;
+      errorEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Criar Loja';
+    }
+  }
+
+  document.getElementById('signup-password').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') fazerSignup();
+  });
 
   // ==================== INIT ====================
   checkAuth();

@@ -1,6 +1,9 @@
 /**
  * Seed script — cria tenant de teste + pedidos com itens + senha de login
  * Uso: node scripts/seed.js
+ *
+ * Pre-requisito: As tabelas base (tenants, pedidos, solicitacoes, tenant_settings, solicitacao_historico)
+ * devem existir no Supabase. Rode a migration 002 no SQL Editor se necessario.
  */
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
@@ -11,26 +14,34 @@ const supabase = createClient(
   process.env.SUPABASE_KEY
 );
 
-async function seed() {
-  console.log('=== troqueAI — Seed de Teste ===\n');
+async function checkColumn(table, column) {
+  const { error } = await supabase.from(table).select(column).limit(1);
+  return !error;
+}
 
-  // 0. Rodar migration (adicionar colunas se nao existem)
-  console.log('0. Aplicando migration...');
-  const migrations = [
-    `ALTER TABLE tenants ADD COLUMN IF NOT EXISTS password_hash TEXT`,
-    `ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS platform_order_id TEXT`,
-    `ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS platform TEXT DEFAULT 'manual'`,
-    `ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS raw_payload JSONB`
+async function seed() {
+  console.log('=== troqueAI — Seed ===\n');
+
+  // 0. Verificar migration
+  console.log('0. Verificando migration 002...');
+  const checks = [
+    { table: 'tenants', column: 'password_hash' },
+    { table: 'pedidos', column: 'platform_order_id' },
+    { table: 'pedidos', column: 'platform' },
+    { table: 'pedidos', column: 'raw_payload' }
   ];
 
-  for (const sql of migrations) {
-    try {
-      await supabase.rpc('exec_sql', { sql_query: sql });
-    } catch {
-      // rpc nao existe — colunas ja foram criadas via SQL Editor
+  for (const { table, column } of checks) {
+    const exists = await checkColumn(table, column);
+    if (!exists) {
+      console.error(`\n  ERRO: Coluna ${table}.${column} nao existe.`);
+      console.error('  Rode a migration no Supabase SQL Editor primeiro:');
+      console.error('  https://supabase.com/dashboard/project/xinnterhoowbjuvcsddz/sql/new');
+      console.error('  Arquivo: migrations/002_auth_and_webhooks.sql\n');
+      process.exit(1);
     }
   }
-  console.log('   Migration checada.\n');
+  console.log('   Migration OK\n');
 
   // 1. Criar tenant com senha
   console.log('1. Criando tenant "Loja Teste"...');
@@ -51,12 +62,9 @@ async function seed() {
 
   if (errTenant) {
     console.error('Erro ao criar tenant:', errTenant);
-    console.log('\n>> Se o erro for sobre password_hash, rode a migration primeiro:');
-    console.log('>> Copie o conteudo de migrations/002_auth_and_webhooks.sql no Supabase SQL Editor');
     process.exit(1);
   }
   console.log(`   OK — ID: ${tenant.id}`);
-  console.log(`   Slug: ${tenant.slug}`);
   console.log(`   Login: admin@lojateste.com / teste123\n`);
 
   // 2. Configuracoes padrao
@@ -89,9 +97,9 @@ async function seed() {
       .from('tenant_settings')
       .upsert({ tenant_id: tenant.id, key, value }, { onConflict: 'tenant_id,key' });
   }
-  console.log('   OK — configs salvas\n');
+  console.log('   OK\n');
 
-  // 3. Criar pedidos de teste
+  // 3. Criar pedidos de teste (dados realistas)
   console.log('3. Criando pedidos de teste...');
   const pedidos = [
     {
@@ -138,6 +146,35 @@ async function seed() {
       total_value: 759.60,
       status: 'delivered',
       platform: 'manual'
+    },
+    {
+      tenant_id: tenant.id,
+      order_number: '1004',
+      customer_name: 'Pedro Lima',
+      customer_email: 'pedro@email.com',
+      customer_cpf: '55566677788',
+      items: JSON.stringify([
+        { name: 'Jaqueta Corta-Vento Azul', quantity: 1, price: '299.90', sku: 'JAQ-AZU-M' },
+        { name: 'Bone Aba Reta Preto', quantity: 1, price: '79.90', sku: 'BON-PRE-U' }
+      ]),
+      total_value: 379.80,
+      status: 'delivered',
+      platform: 'manual'
+    },
+    {
+      tenant_id: tenant.id,
+      order_number: '1005',
+      customer_name: 'Carla Mendes',
+      customer_email: 'carla@email.com',
+      customer_cpf: '99988877766',
+      items: JSON.stringify([
+        { name: 'Saia Midi Plissada Rosa', quantity: 1, price: '159.90', sku: 'SAI-ROS-M' },
+        { name: 'Blusa Cropped Branca', quantity: 2, price: '69.90', sku: 'BLU-BRA-P' },
+        { name: 'Chinelo Slide Preto', quantity: 1, price: '49.90', sku: 'CHI-PRE-37' }
+      ]),
+      total_value: 349.60,
+      status: 'delivered',
+      platform: 'manual'
     }
   ];
 
@@ -151,21 +188,15 @@ async function seed() {
     if (error) {
       console.error(`   ERRO pedido ${pedido.order_number}:`, error.message);
     } else {
-      console.log(`   OK — Pedido #${pedido.order_number} (${pedido.customer_name})`);
+      console.log(`   OK — #${pedido.order_number} (${pedido.customer_name})`);
     }
   }
 
-  // 4. Criar solicitacao de exemplo (pendente)
-  console.log('\n4. Criando solicitacao de exemplo...');
-  const { data: solExisting } = await supabase
-    .from('solicitacoes')
-    .select('id')
-    .eq('tenant_id', tenant.id)
-    .eq('protocolo', 'TRQ-SEED001')
-    .single();
+  // 4. Criar solicitacoes de exemplo
+  console.log('\n4. Criando solicitacoes de exemplo...');
 
-  if (!solExisting) {
-    const { error } = await supabase.from('solicitacoes').insert({
+  const solicitacoes = [
+    {
       tenant_id: tenant.id,
       order_number: '1001',
       protocolo: 'TRQ-SEED001',
@@ -177,11 +208,37 @@ async function seed() {
       customer_cpf: '12345678901',
       status: 'pendente',
       observacao: 'Preciso trocar por tamanho G'
-    });
-    if (error) console.error('   ERRO:', error.message);
-    else console.log('   OK — Solicitacao TRQ-SEED001 criada');
-  } else {
-    console.log('   Solicitacao TRQ-SEED001 ja existe');
+    },
+    {
+      tenant_id: tenant.id,
+      order_number: '1003',
+      protocolo: 'TRQ-SEED002',
+      tipo: 'devolucao',
+      motivo: 'Produto com defeito',
+      itens: JSON.stringify([{ name: 'Sandalia Rasteira Nude', quantity: 1, price: '129.90' }]),
+      customer_name: 'Ana Costa',
+      customer_email: 'ana@email.com',
+      customer_cpf: '11122233344',
+      status: 'aprovada',
+      observacao: 'Sandalia veio com costura solta'
+    }
+  ];
+
+  for (const sol of solicitacoes) {
+    const { data: existing } = await supabase
+      .from('solicitacoes')
+      .select('id')
+      .eq('tenant_id', tenant.id)
+      .eq('protocolo', sol.protocolo)
+      .single();
+
+    if (!existing) {
+      const { error } = await supabase.from('solicitacoes').insert(sol);
+      if (error) console.error(`   ERRO ${sol.protocolo}:`, error.message);
+      else console.log(`   OK — ${sol.protocolo} (${sol.tipo}, ${sol.status})`);
+    } else {
+      console.log(`   ${sol.protocolo} ja existe`);
+    }
   }
 
   console.log('\n=== Seed completo! ===');
@@ -193,6 +250,8 @@ async function seed() {
   console.log(`  Maria: CPF 12345678901 | Pedido 1001`);
   console.log(`  Joao:  CPF 98765432100 | Pedido 1002`);
   console.log(`  Ana:   CPF 11122233344 | Pedido 1003`);
+  console.log(`  Pedro: CPF 55566677788 | Pedido 1004`);
+  console.log(`  Carla: CPF 99988877766 | Pedido 1005`);
 }
 
 seed().catch(err => {

@@ -7,6 +7,7 @@ const {
 } = require('../lib/supabase');
 const { enviarEmail } = require('../lib/email');
 const { criarCupomShopify } = require('../lib/shopify');
+const { criarCupomYampi } = require('../lib/yampi');
 const { gerarPostagemReversa } = require('../lib/correios');
 
 // POST /api/solicitacoes — Criar solicitacao (portal do cliente)
@@ -150,19 +151,36 @@ module.exports = async function handler(req, res) {
 
       const solicitacao = await atualizarSolicitacao(id, tenantId, atualizacao);
 
-      // Shopify integration: criar cupom real se configurado
+      // Integracoes de cupom: criar cupom real na plataforma configurada
       if (status === 'resolvida' && cupom_codigo) {
         const config = await buscarConfiguracoes(tenantId);
+        const validadeDias = parseInt(config.cupom_validade) || 30;
+
+        // Shopify
         if (config.shopify_store && config.shopify_access_token) {
           criarCupomShopify(config.shopify_store, config.shopify_access_token, {
             codigo: cupom_codigo,
             valor: cupom_valor || '0',
             tipo_desconto: 'fixed_amount',
-            validade_dias: parseInt(config.cupom_validade) || 30
+            validade_dias: validadeDias
           }).then(result => {
             console.log(`[SHOPIFY] Cupom ${cupom_codigo} criado:`, result.discount_code_id);
           }).catch(err => {
             console.error('[SHOPIFY] Erro ao criar cupom:', err.message);
+          });
+        }
+
+        // Yampi
+        if (config.yampi_alias && config.yampi_token && config.yampi_secret_key) {
+          criarCupomYampi(config.yampi_alias, config.yampi_token, config.yampi_secret_key, {
+            codigo: cupom_codigo,
+            valor: cupom_valor || '0',
+            tipo_desconto: 'fixed',
+            validade_dias: validadeDias
+          }).then(result => {
+            console.log(`[YAMPI] Cupom ${cupom_codigo} criado:`, result.coupon_id);
+          }).catch(err => {
+            console.error('[YAMPI] Erro ao criar cupom:', err.message);
           });
         }
       }
@@ -175,7 +193,7 @@ module.exports = async function handler(req, res) {
           enviarEmail(solicitacao.customer_email, 'solicitacao_aprovada', {
             cliente_nome: solicitacao.customer_name || 'Cliente',
             protocolo: solicitacao.protocolo,
-            codigo_postagem: codigo_postagem || ''
+            codigo_postagem: atualizacao.codigo_postagem || codigo_postagem || ''
           }).catch(err => console.error('Erro email aprovacao:', err));
         }
 

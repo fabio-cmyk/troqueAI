@@ -23,14 +23,18 @@ api/                    → Endpoints serverless
 lib/
   supabase.js           → ORM (tenants, solicitacoes, pedidos, configs)
   auth-middleware.js    → JWT helper (gerar/verificar token)
-  email.js              → Templates de email (Resend, opcional)
+  email.js              → Templates de email (5 templates, Resend opcional)
+  shopify.js            → Shopify Admin API (criar/deletar cupons)
+  yampi.js              → Yampi API (criar/deletar cupons via Dooki)
+  correios.js           → Correios logistica reversa (postagem + frete)
 public/
   admin/index.html      → Dashboard admin com login + modal detalhe
   portal/index.html     → Portal self-service do cliente
 migrations/
   002_auth_and_webhooks.sql → DDL para colunas de auth e webhooks
 scripts/
-  seed.js               → Cria tenant de teste + pedidos + solicitacao
+  seed.js               → Cria tenant de teste + 5 pedidos + 2 solicitacoes
+  migrate.js            → Verifica se migration 002 foi aplicada
 docs/
   PRD.md                → Product Requirements Document completo
 ```
@@ -48,26 +52,30 @@ docs/
 - [x] API funcionando (6 endpoints: auth, solicitacoes, portal, tenants, dashboard, webhooks)
 - [x] Database schema criado no Supabase
 - [x] Server local rodando (porta 3001)
-- [x] Dashboard admin com login JWT + modal de detalhe (aprovar/rejeitar/cupom)
-- [x] Portal do cliente basico (HTML)
-- [x] Templates de email (3 templates)
-- [x] Auth do lojista (login JWT com bcrypt)
-- [x] Detalhe da solicitacao no admin (aprovar/rejeitar/gerar cupom)
+- [x] Dashboard admin com login + signup + modal de detalhe
+- [x] Portal do cliente com timeline visual + acompanhamento
+- [x] Templates de email (5 templates: criada, aprovada, recebido, rejeitada, vale-troca)
+- [x] Auth do lojista (login + signup com JWT + bcrypt)
+- [x] Onboarding automatizado (criar conta via UI, sem SQL manual)
 - [x] Webhooks Shopify e Yampi (com verificacao HMAC)
-- [x] Seed script com tenant de teste + pedidos
-- [x] Deploy config Vercel (vercel.json)
+- [x] Integracao Shopify (discount codes API — cria cupom real)
+- [x] Integracao Yampi (cupons via API Dooki)
+- [x] Integracao Correios (logistica reversa — auto-gera codigo ao aprovar)
+- [x] Widget embeddable (JS iframe para colar em qualquer loja)
+- [x] CSV export de solicitacoes
+- [x] Seed script com 5 pedidos + 2 solicitacoes de teste
+- [x] Migration checker script (npm run migrate)
+- [x] Deploy no Vercel (troqueai.vercel.app)
 - [x] Sistema de memoria persistente configurado
-- [ ] Rodar migration 002 no Supabase SQL Editor
-- [ ] Rodar seed (npm run seed)
-- [ ] Deploy efetivo no Vercel (vercel --prod)
-- [ ] Integracao Shopify (discount codes API)
-- [ ] Integracao Correios (logistica reversa)
-- [ ] Widget embeddable (JS para colar em qualquer loja)
+- [ ] Rodar migration 002 no Supabase SQL Editor (se colunas nao existem)
+- [ ] Configurar RESEND_API_KEY no Vercel (emails funcionam sem, logam no console)
+- [ ] Configurar JWT_SECRET seguro no Vercel
 
 ## Comandos
 ```bash
 npm run dev          # Roda local na porta 3001
 npm run seed         # Cria tenant de teste (admin@lojateste.com / teste123)
+npm run migrate      # Verifica se migration 002 foi aplicada
 ```
 
 ## Credenciais de Teste
