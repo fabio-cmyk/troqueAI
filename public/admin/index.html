@@ -279,6 +279,7 @@
   </div>
   <nav>
     <a href="#" class="active" onclick="showSection('dashboard', this)">Dashboard</a>
+    <a href="#" onclick="showSection('pedidos', this)">Pedidos</a>
     <a href="#" onclick="showSection('solicitacoes', this)">Solicitacoes</a>
     <a href="#" onclick="showSection('configuracoes', this)">Configuracoes</a>
     <a href="#" onclick="showSection('webhooks', this)">Integracoes</a>
@@ -318,6 +319,54 @@
         <div class="value" id="stat-taxa" style="color: #10b981;">-</div>
         <div class="sub">Resolvidas / Total</div>
       </div>
+    </div>
+  </div>
+
+  <!-- PEDIDOS -->
+  <div id="section-pedidos" style="display:none;">
+    <h1 style="font-size: 24px; color: #1f2937; margin-bottom: 24px;">Pedidos</h1>
+
+    <div class="filters">
+      <input type="text" id="pedido-busca" placeholder="Buscar por nome, email, CPF ou numero..." onkeyup="debouncePedidos()" style="flex:1; min-width: 250px;">
+      <select id="pedido-status" onchange="carregarPedidos()">
+        <option value="">Todos os status</option>
+        <option value="pending">Pendente</option>
+        <option value="paid">Pago</option>
+        <option value="processing">Processando</option>
+        <option value="shipped">Enviado</option>
+        <option value="delivered">Entregue</option>
+        <option value="cancelled">Cancelado</option>
+      </select>
+      <select id="pedido-platform" onchange="carregarPedidos()">
+        <option value="">Todas plataformas</option>
+        <option value="shopify">Shopify</option>
+        <option value="yampi">Yampi</option>
+        <option value="manual">Manual</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 style="margin: 0;">Lista de Pedidos</h2>
+        <span style="font-size: 13px; color: #6b7280;" id="pedidos-count">-</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Pedido</th>
+            <th>Cliente</th>
+            <th>Email</th>
+            <th>Valor</th>
+            <th>Status</th>
+            <th>Plataforma</th>
+            <th>Data</th>
+          </tr>
+        </thead>
+        <tbody id="tabela-pedidos">
+          <tr><td colspan="7" class="empty-state"><div class="icon">&#128230;</div>Carregando...</td></tr>
+        </tbody>
+      </table>
+      <div style="display: flex; justify-content: center; gap: 8px; margin-top: 16px;" id="pedidos-paginacao"></div>
     </div>
   </div>
 
@@ -671,6 +720,7 @@
     if (el) el.classList.add('active');
 
     if (name === 'dashboard') carregarDashboard();
+    if (name === 'pedidos') carregarPedidos();
     if (name === 'solicitacoes') carregarSolicitacoes();
   }
 
@@ -909,6 +959,84 @@
   document.getElementById('modal-detalhe').addEventListener('click', function(e) {
     if (e.target === this) fecharModal();
   });
+
+  // ==================== PEDIDOS ====================
+  let pedidosPage = 0;
+  let pedidosTimer = null;
+
+  function debouncePedidos() {
+    clearTimeout(pedidosTimer);
+    pedidosTimer = setTimeout(() => { pedidosPage = 0; carregarPedidos(); }, 300);
+  }
+
+  async function carregarPedidos(page) {
+    if (page !== undefined) pedidosPage = page;
+    const limit = 50;
+    const offset = pedidosPage * limit;
+
+    try {
+      const search = document.getElementById('pedido-busca').value.trim();
+      const status = document.getElementById('pedido-status').value;
+      const platform = document.getElementById('pedido-platform').value;
+
+      let url = `/api/pedidos?tenant_id=${TENANT.id}&limit=${limit}&offset=${offset}`;
+      if (search) url += `&search=${encodeURIComponent(search)}`;
+      if (status) url += `&status=${status}`;
+      if (platform) url += `&platform=${platform}`;
+
+      const res = await fetch(url, { headers: headers() });
+      const data = await res.json();
+
+      document.getElementById('pedidos-count').textContent = `${data.total || 0} pedidos`;
+
+      const tbody = document.getElementById('tabela-pedidos');
+      if (!data.pedidos?.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><div class="icon">&#128230;</div>Nenhum pedido encontrado</td></tr>';
+        document.getElementById('pedidos-paginacao').innerHTML = '';
+        return;
+      }
+
+      const statusColors = {
+        pending: '#fef3c7', paid: '#d1fae5', processing: '#dbeafe',
+        shipped: '#e0e7ff', delivered: '#d1fae5', cancelled: '#f3f4f6'
+      };
+      const statusTextColors = {
+        pending: '#92400e', paid: '#065f46', processing: '#1e40af',
+        shipped: '#3730a3', delivered: '#065f46', cancelled: '#6b7280'
+      };
+      const statusLabels = {
+        pending: 'Pendente', paid: 'Pago', processing: 'Processando',
+        shipped: 'Enviado', delivered: 'Entregue', cancelled: 'Cancelado'
+      };
+
+      tbody.innerHTML = data.pedidos.map(p => {
+        const items = typeof p.items === 'string' ? JSON.parse(p.items) : (p.items || []);
+        const itemCount = items.reduce((acc, i) => acc + (i.quantity || 1), 0);
+        return `<tr style="cursor:default;">
+          <td><strong>#${p.order_number}</strong><br><span style="font-size:12px; color:#9ca3af;">${itemCount} item${itemCount !== 1 ? 's' : ''}</span></td>
+          <td>${p.customer_name || '-'}</td>
+          <td style="font-size:13px;">${p.customer_email || '-'}</td>
+          <td>R$ ${(p.total_value || 0).toFixed(2)}</td>
+          <td><span class="badge" style="background:${statusColors[p.status] || '#f3f4f6'};color:${statusTextColors[p.status] || '#6b7280'};">${statusLabels[p.status] || p.status}</span></td>
+          <td><span style="font-size:12px; text-transform:capitalize;">${p.platform || '-'}</span></td>
+          <td style="font-size:13px;">${p.created_at ? new Date(p.created_at).toLocaleDateString('pt-BR') : '-'}</td>
+        </tr>`;
+      }).join('');
+
+      // Paginacao
+      const totalPages = Math.ceil((data.total || 0) / limit);
+      const pagEl = document.getElementById('pedidos-paginacao');
+      if (totalPages <= 1) { pagEl.innerHTML = ''; return; }
+
+      let pagHtml = '';
+      if (pedidosPage > 0) pagHtml += `<button onclick="carregarPedidos(${pedidosPage - 1})" style="padding:6px 12px; border:1px solid #e5e7eb; border-radius:6px; background:white; cursor:pointer;">Anterior</button>`;
+      pagHtml += `<span style="padding:6px 12px; font-size:14px; color:#6b7280;">Pagina ${pedidosPage + 1} de ${totalPages}</span>`;
+      if (pedidosPage < totalPages - 1) pagHtml += `<button onclick="carregarPedidos(${pedidosPage + 1})" style="padding:6px 12px; border:1px solid #e5e7eb; border-radius:6px; background:white; cursor:pointer;">Proxima</button>`;
+      pagEl.innerHTML = pagHtml;
+    } catch (err) {
+      console.error('Erro pedidos:', err);
+    }
+  }
 
   // ==================== CSV EXPORT ====================
   function exportarCSV() {
@@ -1160,7 +1288,7 @@
       setTimeout(() => {
         alert(`${shop} conectada com sucesso! Pedidos estao sendo importados.`);
         // Ir direto para integracoes
-        showSection('webhooks', document.querySelector('.sidebar nav a:nth-child(4)'));
+        showSection('webhooks', document.querySelector('.sidebar nav a:nth-child(5)'));
       }, 500);
       // Limpar URL
       history.replaceState(null, '', '/admin');
