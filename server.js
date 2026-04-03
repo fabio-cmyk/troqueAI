@@ -24,6 +24,13 @@ app.all('/api/tenants', require('./api/tenants'));
 app.all('/api/dashboard', require('./api/dashboard'));
 app.all('/api/webhooks', require('./api/webhooks'));
 
+// Widget (embeddable JS)
+app.get('/widget.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.sendFile(path.join(__dirname, 'public/widget/widget.js'));
+});
+
 // Frontend routes
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public/admin/index.html')));
 app.get('/admin/*', (req, res) => res.sendFile(path.join(__dirname, 'public/admin/index.html')));

@@ -127,6 +127,39 @@
       color: #9ca3af;
     }
     .powered-by a { color: #6366f1; text-decoration: none; font-weight: 600; }
+
+    /* Timeline */
+    .timeline-steps {
+      display: flex; justify-content: space-between; position: relative;
+      margin: 24px 0; padding: 0;
+    }
+    .timeline-steps::before {
+      content: ''; position: absolute; top: 16px; left: 20px; right: 20px;
+      height: 3px; background: #e5e7eb;
+    }
+    .timeline-step {
+      display: flex; flex-direction: column; align-items: center;
+      position: relative; z-index: 1; flex: 1;
+    }
+    .timeline-dot {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: #e5e7eb; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: white; margin-bottom: 8px;
+    }
+    .timeline-dot.done { background: #10b981; }
+    .timeline-dot.current { background: var(--cor-primaria, #6366f1); animation: pulse 2s infinite; }
+    .timeline-dot.rejected { background: #ef4444; }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.4); } 50% { box-shadow: 0 0 0 8px rgba(99,102,241,0); } }
+    .timeline-label { font-size: 11px; color: #6b7280; text-align: center; }
+    .timeline-label.active { color: #1f2937; font-weight: 600; }
+
+    .sol-card {
+      background: white; border-radius: 12px; padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 16px;
+      border-left: 4px solid var(--cor-primaria, #6366f1);
+    }
+    .sol-card h4 { font-size: 15px; color: #1f2937; margin-bottom: 4px; }
+    .sol-card p { font-size: 13px; color: #6b7280; margin: 2px 0; }
   </style>
 </head>
 <body>
@@ -192,6 +225,15 @@
       <p style="font-size: 14px; color: #6b7280;">Você receberá atualizações por e-mail.</p>
     </div>
     <button class="btn" style="margin-top: 24px;" onclick="voltarInicio()">Nova Solicitação</button>
+  </div>
+
+  <!-- STEP: Acompanhamento -->
+  <div class="step" id="step-acompanhamento">
+    <div class="card">
+      <h2 style="font-size: 18px; margin-bottom: 20px; color: #1f2937;">Minhas Solicitacoes</h2>
+      <div id="lista-solicitacoes"></div>
+      <button class="btn" style="background: #e5e7eb; color: #374151; margin-top: 16px;" onclick="voltarBusca()">Voltar</button>
+    </div>
   </div>
 
   <!-- STEP: Loading -->
@@ -333,9 +375,77 @@
     }
   }
 
-  function mostrarSolicitacoes() {
-    // TODO: implementar tela de acompanhamento
-    alert('Em breve: acompanhe suas solicitações aqui.');
+  async function mostrarSolicitacoes() {
+    const identificador = document.getElementById('identificador').value.trim();
+    if (!identificador) {
+      alert('Digite seu CPF ou e-mail primeiro.');
+      return;
+    }
+
+    mostrarStep('step-loading');
+
+    try {
+      const res = await fetch(`/api/portal?slug=${slug}&identificador=${encodeURIComponent(identificador)}&action=solicitacoes`);
+      const solicitacoes = await res.json();
+
+      const container = document.getElementById('lista-solicitacoes');
+
+      if (!solicitacoes.length) {
+        container.innerHTML = '<p style="text-align:center; color:#9ca3af; padding: 30px;">Nenhuma solicitacao encontrada.</p>';
+        mostrarStep('step-acompanhamento');
+        return;
+      }
+
+      container.innerHTML = solicitacoes.map(s => {
+        const statusSteps = ['pendente', 'aprovada', 'postado', 'recebido', 'resolvida'];
+        const rejeitada = s.status === 'rejeitada' || s.status === 'cancelada';
+        const currentIdx = statusSteps.indexOf(s.status);
+        const labels = { pendente: 'Analise', aprovada: 'Aprovada', postado: 'Postado', recebido: 'Recebido', resolvida: 'Resolvida' };
+        const icons = { pendente: '&#9202;', aprovada: '&#10003;', postado: '&#9993;', recebido: '&#128230;', resolvida: '&#9733;' };
+
+        let timeline = '<div class="timeline-steps">';
+        statusSteps.forEach((step, i) => {
+          let dotClass = '';
+          let labelClass = '';
+          if (rejeitada) {
+            dotClass = i === 0 ? 'done' : (i === 1 ? 'rejected' : '');
+          } else if (i < currentIdx) {
+            dotClass = 'done';
+          } else if (i === currentIdx) {
+            dotClass = 'current';
+            labelClass = 'active';
+          }
+          timeline += `<div class="timeline-step">
+            <div class="timeline-dot ${dotClass}">${dotClass === 'done' ? '&#10003;' : (dotClass === 'rejected' ? '&#10007;' : icons[step])}</div>
+            <div class="timeline-label ${labelClass}">${labels[step]}</div>
+          </div>`;
+        });
+        timeline += '</div>';
+
+        if (rejeitada) {
+          timeline = `<div style="text-align:center; padding: 12px; background: #fef2f2; border-radius: 8px; margin: 12px 0;">
+            <span style="color: #dc2626; font-weight: 600;">Solicitacao ${s.status}</span>
+          </div>`;
+        }
+
+        const cupomHtml = s.cupom_codigo ? `<p><strong>Cupom:</strong> ${s.cupom_codigo} (R$ ${s.cupom_valor || '0'})</p>` : '';
+        const postagemHtml = s.codigo_postagem ? `<p><strong>Codigo de postagem:</strong> ${s.codigo_postagem}</p>` : '';
+
+        return `<div class="sol-card">
+          <h4>${s.protocolo} — ${s.tipo}</h4>
+          <p>Pedido #${s.order_number} | ${new Date(s.created_at).toLocaleDateString('pt-BR')}</p>
+          <p>Motivo: ${s.motivo || '-'}</p>
+          ${timeline}
+          ${postagemHtml}
+          ${cupomHtml}
+        </div>`;
+      }).join('');
+
+      mostrarStep('step-acompanhamento');
+    } catch (err) {
+      alert('Erro: ' + err.message);
+      mostrarStep('step-busca');
+    }
   }
 
   function voltarBusca() { mostrarStep('step-busca'); }

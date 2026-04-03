@@ -297,6 +297,7 @@
         <option value="troca">Troca</option>
         <option value="devolucao">Devolucao</option>
       </select>
+      <button onclick="exportarCSV()" style="padding: 8px 16px; background: #059669; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Exportar CSV</button>
     </div>
 
     <div class="card">
@@ -334,6 +335,10 @@
           <input type="number" id="cfg-prazo-troca" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
         </div>
         <div>
+          <label style="font-size: 14px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">CEP de Origem (para logistica reversa)</label>
+          <input type="text" id="cfg-cep-origem" placeholder="Ex: 01001000" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        </div>
+        <div>
           <label style="font-size: 14px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Cor Primaria</label>
           <input type="color" id="cfg-cor-primaria" style="width: 80px; height: 40px; border: none; cursor: pointer;">
         </div>
@@ -367,13 +372,24 @@
     </div>
 
     <div class="card" style="margin-top: 16px;">
-      <h2>Shopify Webhook Secret (opcional)</h2>
+      <h2>Shopify — Configuracao</h2>
       <p style="font-size: 14px; color: #6b7280; margin-bottom: 12px;">
-        Para verificar a autenticidade dos webhooks, cole o secret do Shopify aqui.
+        Para criar cupons reais na Shopify e verificar webhooks.
       </p>
-      <div style="display: flex; gap: 8px; max-width: 500px;">
-        <input type="text" id="cfg-shopify-secret" placeholder="shpss_xxxxxxxxxxxx" style="flex:1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
-        <button onclick="salvarWebhookSecret()" style="padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Salvar</button>
+      <div style="display: grid; gap: 12px; max-width: 500px;">
+        <div>
+          <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Store URL (ex: minha-loja.myshopify.com)</label>
+          <input type="text" id="cfg-shopify-store" placeholder="minha-loja.myshopify.com" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        </div>
+        <div>
+          <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Access Token (Admin API)</label>
+          <input type="password" id="cfg-shopify-token" placeholder="shpat_xxxxxxxxxxxx" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        </div>
+        <div>
+          <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Webhook Secret (opcional)</label>
+          <input type="text" id="cfg-shopify-secret" placeholder="shpss_xxxxxxxxxxxx" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+        </div>
+        <button onclick="salvarShopifyConfig()" style="padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">Salvar Configuracao Shopify</button>
       </div>
     </div>
   </div>
@@ -802,13 +818,24 @@
     if (e.target === this) fecharModal();
   });
 
+  // ==================== CSV EXPORT ====================
+  function exportarCSV() {
+    const status = document.getElementById('filtro-status').value;
+    const tipo = document.getElementById('filtro-tipo').value;
+    let url = `/api/solicitacoes?tenant_id=${TENANT.id}&export=csv`;
+    if (status) url += `&status=${status}`;
+    if (tipo) url += `&tipo=${tipo}`;
+    window.open(url, '_blank');
+  }
+
   // ==================== CONFIGURACOES ====================
   async function salvarConfiguracoes() {
     try {
       const configs = {
         loja_nome: document.getElementById('cfg-loja-nome').value,
         prazo_troca_dias: document.getElementById('cfg-prazo-troca').value,
-        cor_primaria: document.getElementById('cfg-cor-primaria').value
+        cor_primaria: document.getElementById('cfg-cor-primaria').value,
+        cep_origem: document.getElementById('cfg-cep-origem').value
       };
 
       await fetch(`/api/tenants?tenant_id=${TENANT.id}`, {
@@ -837,17 +864,25 @@
     });
   }
 
-  async function salvarWebhookSecret() {
+  async function salvarShopifyConfig() {
+    const configs = {};
+    const store = document.getElementById('cfg-shopify-store').value.trim();
+    const token = document.getElementById('cfg-shopify-token').value.trim();
     const secret = document.getElementById('cfg-shopify-secret').value.trim();
-    if (!secret) return alert('Digite o secret.');
+
+    if (store) configs.shopify_store = store;
+    if (token) configs.shopify_access_token = token;
+    if (secret) configs.shopify_webhook_secret = secret;
+
+    if (Object.keys(configs).length === 0) return alert('Preencha pelo menos um campo.');
 
     try {
       await fetch(`/api/tenants?tenant_id=${TENANT.id}`, {
         method: 'PUT',
         headers: headers(),
-        body: JSON.stringify({ configs: { shopify_webhook_secret: secret } })
+        body: JSON.stringify({ configs })
       });
-      alert('Webhook secret salvo!');
+      alert('Configuracao Shopify salva!');
     } catch (err) {
       alert('Erro: ' + err.message);
     }

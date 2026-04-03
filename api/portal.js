@@ -43,13 +43,20 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Buscar pedido do cliente
-    if (!identificador || !pedido) {
-      return res.status(400).json({ error: 'identificador e pedido obrigatorios' });
+    // Limpar CPF (remover pontos e tracos)
+    const idLimpo = identificador ? identificador.replace(/[.\-\/]/g, '').trim() : '';
+
+    // Buscar solicitacoes do cliente (nao precisa do numero do pedido)
+    if (action === 'solicitacoes') {
+      if (!idLimpo) return res.status(400).json({ error: 'identificador obrigatorio' });
+      const solicitacoes = await buscarSolicitacoesCliente(tenant.id, idLimpo);
+      return res.json(solicitacoes);
     }
 
-    // Limpar CPF (remover pontos e tracos)
-    const idLimpo = identificador.replace(/[.\-\/]/g, '').trim();
+    // Buscar pedido do cliente
+    if (!idLimpo || !pedido) {
+      return res.status(400).json({ error: 'identificador e pedido obrigatorios' });
+    }
 
     if (action === 'pedido') {
       const pedidoData = await buscarPedidoCliente(tenant.id, idLimpo, pedido);
@@ -64,11 +71,6 @@ module.exports = async function handler(req, res) {
         created_at: pedidoData.created_at,
         total_value: pedidoData.total_value
       });
-    }
-
-    if (action === 'solicitacoes') {
-      const solicitacoes = await buscarSolicitacoesCliente(tenant.id, idLimpo);
-      return res.json(solicitacoes);
     }
 
     return res.status(400).json({ error: 'action obrigatorio: config, pedido, ou solicitacoes' });

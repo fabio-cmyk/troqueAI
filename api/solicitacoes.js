@@ -6,6 +6,8 @@ const {
   buscarConfiguracoes
 } = require('../lib/supabase');
 const { enviarEmail } = require('../lib/email');
+const { criarCupomShopify } = require('../lib/shopify');
+const { gerarPostagemReversa } = require('../lib/correios');
 
 // POST /api/solicitacoes — Criar solicitacao (portal do cliente)
 // GET  /api/solicitacoes — Listar solicitacoes (dashboard admin)
@@ -69,7 +71,7 @@ module.exports = async function handler(req, res) {
 
     // GET — Listar ou buscar por ID
     if (req.method === 'GET') {
-      const { id, status, tipo, limit, offset } = req.query;
+      const { id, status, tipo, limit, offset, export: exportFormat } = req.query;
 
       if (id) {
         const solicitacao = await buscarSolicitacaoPorId(id, tenantId);
@@ -79,9 +81,31 @@ module.exports = async function handler(req, res) {
       const solicitacoes = await buscarSolicitacoes(tenantId, {
         status,
         tipo,
-        limit: parseInt(limit || '20'),
+        limit: exportFormat === 'csv' ? 10000 : parseInt(limit || '20'),
         offset: parseInt(offset || '0')
       });
+
+      // CSV export
+      if (exportFormat === 'csv') {
+        const header = 'protocolo,pedido,cliente,email,cpf,tipo,motivo,status,cupom,valor_cupom,data_criacao\n';
+        const rows = solicitacoes.map(s => [
+          s.protocolo,
+          s.order_number,
+          `"${(s.customer_name || '').replace(/"/g, '""')}"`,
+          s.customer_email || '',
+          s.customer_cpf || '',
+          s.tipo,
+          `"${(s.motivo || '').replace(/"/g, '""')}"`,
+          s.status,
+          s.cupom_codigo || '',
+          s.cupom_valor || '',
+          s.created_at ? s.created_at.split('T')[0] : ''
+        ].join(',')).join('\n');
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', 'attachment; filename=solicitacoes.csv');
+        return res.send('\uFEFF' + header + rows);
+      }
 
       return res.json(solicitacoes);
     }
@@ -100,12 +124,48 @@ module.exports = async function handler(req, res) {
       }
 
       const atualizacao = { status };
-      if (codigo_postagem) atualizacao.codigo_postagem = codigo_postagem;
       if (cupom_codigo) atualizacao.cupom_codigo = cupom_codigo;
       if (cupom_valor) atualizacao.cupom_valor = cupom_valor;
       if (nota_interna) atualizacao.nota_interna = nota_interna;
 
+      // Logistica reversa: gerar codigo de postagem automaticamente ao aprovar
+      if (status === 'aprovada') {
+        if (codigo_postagem) {
+          atualizacao.codigo_postagem = codigo_postagem;
+        } else {
+          // Tentar gerar via Correios
+          const config = await buscarConfiguracoes(tenantId);
+          const solicitacaoAtual = await buscarSolicitacaoPorId(id, tenantId);
+          const resultado = await gerarPostagemReversa(config, {
+            customer_name: solicitacaoAtual.customer_name,
+            customer_email: solicitacaoAtual.customer_email
+          });
+          if (resultado.sucesso) {
+            atualizacao.codigo_postagem = resultado.codigo_postagem;
+          }
+        }
+      } else if (codigo_postagem) {
+        atualizacao.codigo_postagem = codigo_postagem;
+      }
+
       const solicitacao = await atualizarSolicitacao(id, tenantId, atualizacao);
+
+      // Shopify integration: criar cupom real se configurado
+      if (status === 'resolvida' && cupom_codigo) {
+        const config = await buscarConfiguracoes(tenantId);
+        if (config.shopify_store && config.shopify_access_token) {
+          criarCupomShopify(config.shopify_store, config.shopify_access_token, {
+            codigo: cupom_codigo,
+            valor: cupom_valor || '0',
+            tipo_desconto: 'fixed_amount',
+            validade_dias: parseInt(config.cupom_validade) || 30
+          }).then(result => {
+            console.log(`[SHOPIFY] Cupom ${cupom_codigo} criado:`, result.discount_code_id);
+          }).catch(err => {
+            console.error('[SHOPIFY] Erro ao criar cupom:', err.message);
+          });
+        }
+      }
 
       // Enviar e-mail baseado no novo status (non-blocking)
       if (solicitacao.customer_email) {
@@ -117,6 +177,22 @@ module.exports = async function handler(req, res) {
             protocolo: solicitacao.protocolo,
             codigo_postagem: codigo_postagem || ''
           }).catch(err => console.error('Erro email aprovacao:', err));
+        }
+
+        if (status === 'recebido') {
+          enviarEmail(solicitacao.customer_email, 'produto_recebido', {
+            cliente_nome: solicitacao.customer_name || 'Cliente',
+            protocolo: solicitacao.protocolo
+          }).catch(err => console.error('Erro email recebido:', err));
+        }
+
+        if (status === 'rejeitada') {
+          enviarEmail(solicitacao.customer_email, 'solicitacao_rejeitada', {
+            cliente_nome: solicitacao.customer_name || 'Cliente',
+            protocolo: solicitacao.protocolo,
+            motivo_rejeicao: nota_interna || '',
+            loja_nome: config.loja_nome || 'Loja'
+          }).catch(err => console.error('Erro email rejeicao:', err));
         }
 
         if (status === 'resolvida' && cupom_codigo) {
