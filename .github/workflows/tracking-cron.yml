@@ -1,0 +1,29 @@
+name: Check Correios Tracking
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'  # A cada 2 horas
+  workflow_dispatch: {}     # Permite rodar manualmente no GitHub
+
+jobs:
+  check-tracking:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call tracking endpoint
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Content-Type: application/json" \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -d '{"action":"check-tracking"}' \
+            https://troqueai.vercel.app/api/integracoes)
+
+          http_code=$(echo "$response" | tail -1)
+          body=$(echo "$response" | head -n -1)
+
+          echo "Status: $http_code"
+          echo "Response: $body"
+
+          if [ "$http_code" != "200" ]; then
+            echo "::error::Tracking check failed with status $http_code"
+            exit 1
+          fi

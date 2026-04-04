@@ -16,14 +16,28 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Metodo nao permitido' });
 
-  // Auth obrigatoria
-  const payload = verificarToken(req);
-  if (!payload) return res.status(401).json({ error: 'Token invalido' });
-
-  const tenantId = payload.tenant_id;
-
   try {
     const { action } = req.body;
+
+    // Check-tracking: aceita CRON_SECRET (sem auth JWT) ou auth normal
+    if (action === 'check-tracking') {
+      const cronSecret = req.headers['x-cron-secret'] || req.query.cron_secret;
+      if (cronSecret && cronSecret === process.env.CRON_SECRET) {
+        // Auth via cron secret — ok, prosseguir (tenantId nao necessario, checa todos)
+      } else {
+        const payload = verificarToken(req);
+        if (!payload) return res.status(401).json({ error: 'Token invalido' });
+      }
+      // Logica do check-tracking fica abaixo
+    }
+
+    // Auth obrigatoria pra todas as outras actions
+    if (action !== 'check-tracking') {
+      var payload = verificarToken(req);
+      if (!payload) return res.status(401).json({ error: 'Token invalido' });
+    }
+
+    const tenantId = payload?.tenant_id;
 
     // ==================== CONNECT SHOPIFY ====================
     if (action === 'connect-shopify') {
