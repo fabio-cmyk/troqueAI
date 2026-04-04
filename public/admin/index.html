@@ -930,15 +930,16 @@
         { label: 'Rejeitar', class: 'btn-rejeitar', form: 'form-rejeitar' }
       ],
       'aprovada': [
-        { label: 'Marcar como Postado', class: 'btn-postado', action: 'postado' },
-        { label: 'Gerar Cupom', class: 'btn-cupom', form: 'form-cupom' }
+        { label: 'Verificar Tracking', class: 'btn-postado', action: 'check-tracking' },
+        { label: 'Marcar como Postado', class: 'btn-postado', action: 'postado' }
       ],
       'postado': [
-        { label: 'Marcar como Recebido', class: 'btn-recebido', action: 'recebido' }
+        { label: 'Marcar como Recebido', class: 'btn-recebido', action: 'recebido' },
+        { label: 'Gerar Cupom', class: 'btn-cupom', form: 'form-cupom' }
       ],
       'recebido': [
-        { label: 'Gerar Cupom e Resolver', class: 'btn-cupom', form: 'form-cupom' },
-        { label: 'Marcar como Resolvida', class: 'btn-resolvida', action: 'resolvida' }
+        { label: 'Marcar como Resolvida', class: 'btn-resolvida', action: 'resolvida' },
+        { label: 'Gerar Cupom', class: 'btn-cupom', form: 'form-cupom' }
       ]
     };
 
@@ -964,6 +965,23 @@
 
   async function executarAcaoRapida(novoStatus) {
     if (!currentSolicitacao) return;
+
+    // Verificar tracking via API
+    if (novoStatus === 'check-tracking') {
+      try {
+        const res = await fetch('/api/tracking', { headers: headers() });
+        const data = await res.json();
+        if (data.updated > 0) {
+          alert(`Tracking atualizado! ${data.updated} solicitacao(es) mudaram de status.`);
+        } else {
+          alert(`Nenhuma atualizacao de tracking encontrada. (${data.checked} verificadas)`);
+        }
+        fecharModal();
+        carregarSolicitacoes();
+      } catch (err) { alert('Erro: ' + err.message); }
+      return;
+    }
+
     try {
       const res = await fetch('/api/solicitacoes', {
         method: 'PATCH',

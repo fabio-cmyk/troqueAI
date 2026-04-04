@@ -23,6 +23,7 @@ app.all('/api/portal', require('./api/portal'));
 app.all('/api/tenants', require('./api/tenants'));
 app.all('/api/dashboard', require('./api/dashboard'));
 app.all('/api/pedidos', require('./api/pedidos'));
+app.all('/api/tracking', require('./api/tracking'));
 app.all('/api/webhooks', require('./api/webhooks'));
 app.all('/api/upload', require('./api/upload'));
 app.all('/api/integracoes', require('./api/integracoes'));

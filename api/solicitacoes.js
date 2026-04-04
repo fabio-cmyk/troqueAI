@@ -1,4 +1,5 @@
 const {
+  supabase,
   criarSolicitacao,
   buscarSolicitacoes,
   buscarSolicitacaoPorId,
@@ -169,8 +170,58 @@ module.exports = async function handler(req, res) {
 
       const solicitacao = await atualizarSolicitacao(id, tenantId, atualizacao);
 
-      // Integracoes de cupom: criar cupom real na plataforma configurada
-      if (status === 'resolvida' && cupom_codigo) {
+      // Auto-gerar cupom ao marcar como postado (se nao tem cupom manual)
+      if (status === 'postado' && !cupom_codigo) {
+        const config = await buscarConfiguracoes(tenantId);
+        const itens = typeof solicitacao.itens === 'string' ? JSON.parse(solicitacao.itens) : (solicitacao.itens || []);
+        const valorItens = itens.reduce((sum, item) => {
+          return sum + (parseFloat(item.price || 0) * parseInt(item.quantity || 1));
+        }, 0);
+
+        if (valorItens > 0) {
+          // Contar sequencia de trocas do mesmo pedido
+          const { count } = await supabase
+            .from('solicitacoes')
+            .select('*', { count: 'exact', head: true })
+            .eq('tenant_id', tenantId)
+            .eq('order_number', solicitacao.order_number);
+
+          const seq = count || 1;
+          const cupomAuto = `TROCA${solicitacao.order_number}${seq}`;
+          const valorAuto = valorItens.toFixed(2);
+          const validadeDias = parseInt(config.cupom_validade) || 30;
+
+          // Atualizar solicitacao com cupom
+          await atualizarSolicitacao(id, tenantId, { cupom_codigo: cupomAuto, cupom_valor: valorAuto });
+
+          // Criar cupom na plataforma
+          if (config.shopify_store && config.shopify_access_token) {
+            criarCupomShopify(config.shopify_store, config.shopify_access_token, {
+              codigo: cupomAuto, valor: valorAuto, tipo_desconto: 'fixed_amount', validade_dias: validadeDias
+            }).then(() => console.log(`[CUPOM AUTO] Shopify: ${cupomAuto} = R$${valorAuto}`))
+              .catch(err => console.error('[CUPOM AUTO] Shopify erro:', err.message));
+          }
+          if (config.yampi_alias && config.yampi_token && config.yampi_secret_key) {
+            criarCupomYampi(config.yampi_alias, config.yampi_token, config.yampi_secret_key, {
+              codigo: cupomAuto, valor: valorAuto, tipo_desconto: 'fixed', validade_dias: validadeDias
+            }).then(() => console.log(`[CUPOM AUTO] Yampi: ${cupomAuto} = R$${valorAuto}`))
+              .catch(err => console.error('[CUPOM AUTO] Yampi erro:', err.message));
+          }
+
+          // Email com cupom
+          if (solicitacao.customer_email) {
+            enviarEmail(solicitacao.customer_email, 'vale_troca', {
+              cliente_nome: solicitacao.customer_name || 'Cliente',
+              loja_nome: config.loja_nome || 'Loja',
+              cupom_codigo: cupomAuto, valor: valorAuto,
+              validade: `${validadeDias} dias`
+            }).catch(err => console.error('Erro email cupom auto:', err));
+          }
+        }
+      }
+
+      // Integracoes de cupom: criar cupom MANUAL na plataforma configurada
+      if ((status === 'resolvida' || status === 'postado') && cupom_codigo) {
         const config = await buscarConfiguracoes(tenantId);
         const validadeDias = parseInt(config.cupom_validade) || 30;
 
