@@ -439,6 +439,34 @@
         </button>
       </div>
     </div>
+
+    <div class="card" style="margin-top: 16px;">
+      <h2>Portal de Solicitacoes</h2>
+      <div style="display: grid; gap: 16px; max-width: 600px;">
+        <div>
+          <label style="font-size: 14px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">
+            <input type="checkbox" id="cfg-foto-obrigatoria" style="margin-right: 8px;">
+            Exigir foto do produto na solicitacao
+          </label>
+        </div>
+        <div>
+          <label style="font-size: 14px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">
+            <input type="checkbox" id="cfg-termos-habilitado" style="margin-right: 8px;" onchange="document.getElementById('termos-wrap').style.display = this.checked ? 'block' : 'none'">
+            Exibir termos antes da solicitacao
+          </label>
+          <div id="termos-wrap" style="display: none; margin-top: 8px;">
+            <textarea id="cfg-termos-texto" rows="6" placeholder="Ex: Ao solicitar troca ou devolução, você concorda com nossa política..." style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; font-family: inherit;"></textarea>
+          </div>
+        </div>
+        <div>
+          <label style="font-size: 14px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px;">Texto de instrucoes (exibido apos enviar solicitacao)</label>
+          <textarea id="cfg-instrucoes-texto" rows="5" placeholder="Ex: 1. Aguarde a aprovação por email. 2. Imprima o código de postagem. 3. Leve o produto aos Correios..." style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; font-family: inherit;"></textarea>
+        </div>
+        <button onclick="salvarConfigPortal()" style="padding: 12px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">
+          Salvar Configuracoes do Portal
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- INTEGRACOES -->
@@ -1228,6 +1256,27 @@
     } finally {
       btn.disabled = false;
       btn.textContent = 'Conectar Yampi';
+    }
+  }
+
+  // ==================== PORTAL CONFIG ====================
+  async function salvarConfigPortal() {
+    try {
+      const configs = {
+        foto_obrigatoria: document.getElementById('cfg-foto-obrigatoria').checked ? 'true' : 'false',
+        termos_habilitado: document.getElementById('cfg-termos-habilitado').checked ? 'true' : 'false',
+        termos_texto: document.getElementById('cfg-termos-texto').value,
+        instrucoes_texto: document.getElementById('cfg-instrucoes-texto').value
+      };
+
+      await fetch(`/api/tenants?tenant_id=${TENANT.id}`, {
+        method: 'PUT',
+        headers: headers(),
+        body: JSON.stringify({ configs })
+      });
+      alert('Configuracoes do portal salvas!');
+    } catch (err) {
+      alert('Erro: ' + err.message);
     }
   }
 

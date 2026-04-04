@@ -26,6 +26,10 @@ module.exports = async function handler(req, res) {
         cor_primaria: config.cor_primaria || '#6366f1',
         cor_secundaria: config.cor_secundaria || '#8b5cf6',
         prazo_troca_dias: config.prazo_troca_dias || '30',
+        foto_obrigatoria: config.foto_obrigatoria === 'true',
+        termos_habilitado: config.termos_habilitado === 'true',
+        termos_texto: config.termos_texto || '',
+        instrucoes_texto: config.instrucoes_texto || '',
         motivos_troca: config.motivos_troca ? JSON.parse(config.motivos_troca) : [
           'Tamanho errado',
           'Cor diferente do esperado',
@@ -61,7 +65,7 @@ module.exports = async function handler(req, res) {
       const coluna = idLimpo.includes('@') ? 'customer_email' : 'customer_cpf';
       const { data: pedidos, error: errPedidos } = await supabase
         .from('pedidos')
-        .select('order_number, customer_name, customer_email, customer_cpf, items, total_value, status, created_at')
+        .select('order_number, customer_name, customer_email, customer_cpf, items, total_value, status, created_at, raw_payload')
         .eq('tenant_id', tenant.id)
         .eq(coluna, idLimpo)
         .order('created_at', { ascending: false })
@@ -69,11 +73,40 @@ module.exports = async function handler(req, res) {
 
       if (errPedidos) throw errPedidos;
 
-      // Parse items JSON
-      const pedidosFormatados = (pedidos || []).map(p => ({
-        ...p,
-        items: typeof p.items === 'string' ? JSON.parse(p.items) : p.items
-      }));
+      // Parse items JSON + extrair endereço do raw_payload
+      const pedidosFormatados = (pedidos || []).map(p => {
+        const items = typeof p.items === 'string' ? JSON.parse(p.items) : p.items;
+        let endereco = null;
+
+        // Extrair endereço do Shopify raw_payload
+        if (p.raw_payload) {
+          const addr = p.raw_payload.shipping_address || p.raw_payload.billing_address;
+          if (addr) {
+            endereco = {
+              logradouro: addr.address1 || '',
+              numero: addr.address2 || '',
+              complemento: '',
+              bairro: addr.company || '',
+              cep: (addr.zip || '').replace(/\D/g, ''),
+              cidade: addr.city || '',
+              uf: addr.province_code || addr.province || '',
+              telefone: addr.phone || ''
+            };
+          }
+        }
+
+        return {
+          order_number: p.order_number,
+          customer_name: p.customer_name,
+          customer_email: p.customer_email,
+          customer_cpf: p.customer_cpf,
+          items,
+          total_value: p.total_value,
+          status: p.status,
+          created_at: p.created_at,
+          endereco
+        };
+      });
 
       return res.json(pedidosFormatados);
     }

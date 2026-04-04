@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
 
     // POST — Cliente cria solicitacao
     if (req.method === 'POST') {
-      const { pedido_id, order_number, tipo, motivo, itens, customer_name, customer_email, customer_cpf, observacao } = req.body;
+      const { pedido_id, order_number, tipo, motivo, itens, customer_name, customer_email, customer_cpf, observacao, fotos, endereco } = req.body;
 
       // Validar campos obrigatorios
       if (!order_number || !tipo || !itens?.length) {
@@ -41,7 +41,7 @@ module.exports = async function handler(req, res) {
       // Gerar protocolo unico
       const protocolo = `TRQ-${Date.now().toString(36).toUpperCase()}`;
 
-      const solicitacao = await criarSolicitacao({
+      const dados = {
         tenant_id: tenantId,
         pedido_id,
         order_number,
@@ -54,7 +54,12 @@ module.exports = async function handler(req, res) {
         customer_cpf,
         observacao,
         status: 'pendente'
-      });
+      };
+
+      if (fotos && fotos.length > 0) dados.fotos = JSON.stringify(fotos);
+      if (endereco) dados.endereco = JSON.stringify(endereco);
+
+      const solicitacao = await criarSolicitacao(dados);
 
       // Enviar e-mail de confirmacao (non-blocking)
       if (customer_email) {

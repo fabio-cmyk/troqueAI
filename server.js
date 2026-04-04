@@ -24,6 +24,7 @@ app.all('/api/tenants', require('./api/tenants'));
 app.all('/api/dashboard', require('./api/dashboard'));
 app.all('/api/pedidos', require('./api/pedidos'));
 app.all('/api/webhooks', require('./api/webhooks'));
+app.all('/api/upload', require('./api/upload'));
 app.all('/api/integracoes', require('./api/integracoes'));
 app.all('/api/shopify-auth', require('./api/shopify-auth'));
 app.all('/api/shopify-callback', require('./api/shopify-callback'));
