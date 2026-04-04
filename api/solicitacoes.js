@@ -56,10 +56,22 @@ module.exports = async function handler(req, res) {
         status: 'pendente'
       };
 
-      if (fotos && fotos.length > 0) dados.fotos = JSON.stringify(fotos);
-      if (endereco) dados.endereco = JSON.stringify(endereco);
-
-      const solicitacao = await criarSolicitacao(dados);
+      // Tentar incluir fotos e endereco (colunas podem nao existir ainda)
+      try {
+        if (fotos && fotos.length > 0) dados.fotos = JSON.stringify(fotos);
+        if (endereco) dados.endereco = JSON.stringify(endereco);
+        var solicitacao = await criarSolicitacao(dados);
+      } catch (insertErr) {
+        // Se falhar por coluna inexistente, tentar sem fotos/endereco
+        if (insertErr.message?.includes('fotos') || insertErr.message?.includes('endereco') || insertErr.code === '42703') {
+          delete dados.fotos;
+          delete dados.endereco;
+          var solicitacao = await criarSolicitacao(dados);
+          console.warn('[SOLICITACOES] Colunas fotos/endereco nao existem — rode a migration 003');
+        } else {
+          throw insertErr;
+        }
+      }
 
       // Enviar e-mail de confirmacao (non-blocking)
       if (customer_email) {
