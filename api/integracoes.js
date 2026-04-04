@@ -2,6 +2,10 @@ const axios = require('axios');
 const { supabase } = require('../lib/supabase');
 const { buscarConfiguracoes, salvarConfiguracao } = require('../lib/supabase');
 const { verificarToken } = require('../lib/auth-middleware');
+const { rastrearObjeto } = require('../lib/correios');
+const { criarCupomShopify } = require('../lib/shopify');
+const { criarCupomYampi } = require('../lib/yampi');
+const { enviarEmail } = require('../lib/email');
 
 /**
  * POST /api/integracoes — Conectar plataforma, criar webhooks, importar pedidos
@@ -181,6 +185,54 @@ module.exports = async function handler(req, res) {
         platform: platformInfo,
         orders_count: count || 0
       });
+    }
+
+    // ==================== CHECK TRACKING ====================
+    if (action === 'check-tracking') {
+      const { data: solicitacoes, error: errSol } = await supabase
+        .from('solicitacoes')
+        .select('*')
+        .eq('status', 'aprovada')
+        .not('codigo_postagem', 'is', null)
+        .not('codigo_postagem', 'eq', '');
+
+      if (errSol) throw errSol;
+      if (!solicitacoes?.length) {
+        return res.json({ checked: 0, updated: 0, message: 'Nenhuma solicitacao para rastrear.' });
+      }
+
+      let checked = 0, updated = 0;
+      const tenantIds = [...new Set(solicitacoes.map(s => s.tenant_id))];
+
+      for (const tid of tenantIds) {
+        const cfg = await buscarConfiguracoes(tid);
+        for (const sol of solicitacoes.filter(s => s.tenant_id === tid)) {
+          checked++;
+          if (sol.codigo_postagem.length < 13) continue; // skip simulados
+
+          const tracking = await rastrearObjeto(cfg, sol.codigo_postagem);
+
+          if (tracking.foiPostado) {
+            const cupom = await gerarCupomAutomatico(sol, cfg);
+            const upd = { status: 'postado', updated_at: new Date().toISOString() };
+            if (cupom) { upd.cupom_codigo = cupom.codigo; upd.cupom_valor = cupom.valor; }
+            await supabase.from('solicitacoes').update(upd).eq('id', sol.id);
+            updated++;
+          }
+
+          if (tracking.foiEntregue) {
+            const { data: cur } = await supabase.from('solicitacoes').select('status').eq('id', sol.id).single();
+            if (cur?.status === 'postado') {
+              await supabase.from('solicitacoes').update({ status: 'recebido', updated_at: new Date().toISOString() }).eq('id', sol.id);
+              if (sol.customer_email) {
+                enviarEmail(sol.customer_email, 'produto_recebido', { cliente_nome: sol.customer_name || 'Cliente', protocolo: sol.protocolo }).catch(() => {});
+              }
+            }
+          }
+        }
+      }
+
+      return res.json({ checked, updated });
     }
 
     // ==================== IMPORT ORDERS (paginado) ====================
@@ -492,6 +544,40 @@ async function importYampiOrdersBatch(tenantId, alias, headers, cursor) {
     console.error('[YAMPI] Erro batch import:', err.message);
     return { imported: 0, has_more: false, error: err.message };
   }
+}
+
+async function gerarCupomAutomatico(solicitacao, config) {
+  try {
+    const itens = typeof solicitacao.itens === 'string' ? JSON.parse(solicitacao.itens) : (solicitacao.itens || []);
+    const valor = itens.reduce((sum, item) => sum + (parseFloat(item.price || 0) * parseInt(item.quantity || 1)), 0);
+    if (valor <= 0) return null;
+
+    const { count } = await supabase.from('solicitacoes').select('*', { count: 'exact', head: true })
+      .eq('tenant_id', solicitacao.tenant_id).eq('order_number', solicitacao.order_number);
+
+    const codigo = `TROCA${solicitacao.order_number}${count || 1}`;
+    const valorStr = valor.toFixed(2);
+    const validadeDias = parseInt(config.cupom_validade) || 30;
+
+    if (config.shopify_store && config.shopify_access_token) {
+      criarCupomShopify(config.shopify_store, config.shopify_access_token, {
+        codigo, valor: valorStr, tipo_desconto: 'fixed_amount', validade_dias: validadeDias
+      }).catch(err => console.error('[CUPOM AUTO] Shopify:', err.message));
+    }
+    if (config.yampi_alias && config.yampi_token && config.yampi_secret_key) {
+      criarCupomYampi(config.yampi_alias, config.yampi_token, config.yampi_secret_key, {
+        codigo, valor: valorStr, tipo_desconto: 'fixed', validade_dias: validadeDias
+      }).catch(err => console.error('[CUPOM AUTO] Yampi:', err.message));
+    }
+    if (solicitacao.customer_email) {
+      enviarEmail(solicitacao.customer_email, 'vale_troca', {
+        cliente_nome: solicitacao.customer_name || 'Cliente', loja_nome: config.loja_nome || 'Loja',
+        cupom_codigo: codigo, valor: valorStr, validade: `${validadeDias} dias`
+      }).catch(() => {});
+    }
+
+    return { codigo, valor: valorStr };
+  } catch (err) { console.error('[CUPOM AUTO]', err.message); return null; }
 }
 
 function mapShopifyStatus(financial, fulfillment) {
